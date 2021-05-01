@@ -1,0 +1,9 @@
+[submodule "lambda-kern"]
+	path = lambda-kern
+	url = git@github.com:farlepet/lambda-kern.git
+[submodule "lambda-lib"]
+	path = lambda-lib
+	url = git@github.com:farlepet/lambda-lib.git
+[submodule "lambda-lutils"]
+	path = lambda-lutils
+	url = git@github.com:farlepet/lambda-lutils.git
