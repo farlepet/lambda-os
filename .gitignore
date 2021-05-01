@@ -1,0 +1,8 @@
+*.o
+*.cpio
+*.bin
+*.kern
+*.code-workspace
+*.img
+*.iso
+
