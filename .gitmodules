@@ -7,3 +7,6 @@
 [submodule "lambda-lutils"]
 	path = lambda-lutils
 	url = git@github.com:farlepet/lambda-lutils.git
+[submodule "lambda-modules"]
+	path = lambda-modules
+	url = git@github.com:farlepet/lambda-modules.git
