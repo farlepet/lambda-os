@@ -1,0 +1,113 @@
+Details about the kernel tasks.
+
+
+*** What is a kernel task? ***
+
+	A kernel task, in relation to Lambda OS, is a process that does kernel-level
+operations, and sends and reveives messages to and from user processes.
+
+
+*** List of kernel tasks ***
+
++-----+-------------+----------------------------------------------+
+| num | kernel name | definition                                   |
++=====+=============+==============================================+
+| 00  | IDLE_TASK   | Runs when nothing else is running            |
+| 01  | KBUG_TASK   | Debugger (Only if enabled at compilation)    |
+| 02  | KINPUT_TASK | Handles various input (ex: keyboard & mouse) |
+| 03  | KTERM_TASK  | Kernel terminal                              |
++-----+-------------+----------------------------------------------+
+
+
+*** Kernel task descriptions ***
+
+-- Idle Task (IDLE_TASK) --
+
+	Description:
+		When other tasks are waiting for input, or otherwise not running,
+		this task will run and employs teqniques to save energy.
+	
+	Messaging:
+		The idle task doesn't send or accept any messages.
+
+-- Debugger task (KBUG_TASK) --
+
+    NOTE: This is currently pending re-implementation, or perhaps complete removal.
+
+	Description:
+		Used to debug the kernel and its parts. This is only enabled if
+		`DEBUGGER` was defined at the time of compilation. This usually is not
+		useful except to kernel developers, as it can only do limited debugging
+		on user processes.
+	
+	Messaging:
+		As with the video task, the debugger task has seperate sections, because
+		it has to deal with different operations. The structure is still the
+		same:
+
+			int pid;  // PID of the sending process
+			u8  type; // The requested operation
+
+		There are several functions that the kernel debugger carries out:
+
+			+-----+---------------+----------------------------------+
+			| num | kernel name   | operation                        |
+			+=====+===============+==================================+
+			| 00  | KBUG_PROCINFO | Get info on running processes    |
+			| 01  | KBUG_CPUINFO  | Get info on the processor*       |
+			| 02  | KBUG_MEMINFO  | Request a region of memory       |
+			| 03  | KBUG_IDEBUG   | Start the interactive debugger** |
+			+-----+---------------+----------------------------------+
+				*  Not yet implemented
+				** The interactive debugger is still being worked on, it is not
+				   yet interactive
+
+		These different operations have their own second structure in the
+		message:
+
+			KBUG_PROCINFO:
+				int pid;            // PID of requested process (not always used)
+				uint8_t  type; // Type of requested information
+				uint32_t info;  // Other required information (if necessary)
+
+				+-----+-------------------+------------------------------------------+
+				| num | kernel name       | information returned                     |
+				+=====+===================+==========================================+
+				| 00  | KBUG_PROC_NPROCS  | Number of processes                      |
+				| 01  | KBUG_PROC_PROCPID | Pid of process index `info`*             |
+				| 02  | KBUG_PROC_UPROC   | A process structure usable by user tasks |
+				+-----+-------------------+------------------------------------------+
+					Allowed values of `type`
+					* Uses `info` field
+
+			KBUG_CPUINFO:
+				## Not yet implemented!!! ##
+
+			KBUG_MEMINFO:
+				uint64_t mem_addr; // Address of requested memory region
+				uint32_t mem_len;  // Length of the requested memory region
+
+			KBUG_IDEBUG:
+				## No extra information required ##
+
+		As with the video task, make sure you send both sections (where
+		applicable) in one single message.
+	
+-- Input task (KINPUT_TASK) --
+
+	Description:
+		This task handles all input to the kernel.
+	
+	Messaging:
+		This task sends and receives all it's information within the kernel
+		only.
+
+-- Kernel terminal (KTERM_TASK) --
+
+	Description:
+		A basic debugging terminal built in to the kernel. This is to be used by
+		kernel developers or if a problem occurs and you can not load a normal
+		terminal or shell.
+	
+	Messaging:
+		All messaging this task does is within the kernel itself.
