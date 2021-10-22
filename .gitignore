@@ -1,3 +1,4 @@
+.vscode
 *.o
 *.cpio
 *.bin
@@ -5,4 +6,4 @@
 *.code-workspace
 *.img
 *.iso
-
+*.log

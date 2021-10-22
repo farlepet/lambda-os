@@ -14,6 +14,8 @@ INITRD     = $(BUILDDIR)/initrd.cpio
 FLOPPY     = $(BUILDDIR)/lambda-os.img
 ISO        = $(BUILDDIR)/lambda-os.iso
 
+STRIP      = $(CROSS_COMPILE)strip
+
 export CC
 export AS
 export LD
@@ -51,7 +53,7 @@ $(FLOPPY): $(STRIPKERNEL) $(INITRD)
 	$(Q) syslinux -i $(FLOPPY)
 
 $(STRIPKERNEL): $(KERNEL)
-	$(Q) strip $(KERNEL) -o $(STRIPKERNEL)
+	$(Q) $(STRIP) $(KERNEL) -o $(STRIPKERNEL)
 
 $(KERNEL): $(INITRD) $(KERNSRC)
 	$(Q) cd $(KERNELDIR); $(MAKE) build/lambda.kern
