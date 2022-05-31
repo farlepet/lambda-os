@@ -56,7 +56,7 @@ $(STRIPKERNEL): $(KERNEL)
 $(KERNEL): $(INITRD) $(KERNSRC)
 	$(Q) cd $(KERNELDIR); $(MAKE) build/x86/ia32/pc/lambda.kern
 
-$(INITRD): $(CPIOFILES)
+$(INITRD): pop-initrd $(CPIOFILES)
 	@echo -e "\033[33m  \033[1mGenerating InitCPIO\033[0m"
 	$(Q) cd $(INITRDDIR); find . | cpio -o -v -O$(INITRD) &> /dev/null
 	$(Q) cp $(INITRD) $(KERNELDIR)/initrd.cpio
@@ -67,7 +67,7 @@ emu:
 emu-debug:
 	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot -gdb tcp::1234 -S
 
-clean:
+clean: clean-user
 	$(Q) rm -f $(INITRD) $(ISO) $(FLOPPY)
 	$(Q) rm -rf $(INITRDDIR)/bin
 	$(Q) cd $(KERNELDIR); $(MAKE) clean
@@ -106,4 +106,11 @@ $(INITRDDIR)/bin:
 	mkdir $@
 
 pop-initrd: $(LINIT) $(LSHELL) $(LUTILS)
+
+clean-user:
+	$(Q) cd $(LLIB_DIR);   $(MAKE) clean
+	$(Q) cd $(LINIT_DIR);  $(MAKE) clean
+	$(Q) cd $(LSHELL_DIR); $(MAKE) clean
+	$(Q) cd $(LUTILS_DIR); $(MAKE) clean
+	$(Q) rm -rf $(INITRDDIR)/bin
 
