@@ -99,8 +99,9 @@ $(LSHELL): $(LSHELLSRC) $(LLIB) $(INITRDDIR)/bin
 
 $(LUTILS): $(LUTILSSRC) $(LLIB) $(INITRDDIR)/bin
 	@cd $(LUTILS_DIR); $(MAKE) LIB=$(LLIB_DIR) OUT=$@
-	@cd $(INITRDDIR)/bin; rm -f cat; ln -s lutils cat
-	@cd $(INITRDDIR)/bin; rm -f ls;  ln -s lutils ls
+	@cd $(INITRDDIR)/bin; rm -f cat;  ln -s lutils cat
+	@cd $(INITRDDIR)/bin; rm -f ls;   ln -s lutils ls
+	@cd $(INITRDDIR)/bin; rm -f echo; ln -s lutils echo
 
 $(INITRDDIR)/bin:
 	mkdir $@
