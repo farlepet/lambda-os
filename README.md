@@ -37,6 +37,8 @@ To build Lambda OS:
    - Defaults to x86 ISO
      - For clang: `make CC=clang AS=clang`
      - 1.44MiB floppy target: `make floppy`
+       - NOTE: This currently requires a manual change in the kernels config.h:
+         `FEATURE_MULTIBOOT` must be set to 1, rather than 2.
      - ISO target: `make cdrom`
    - For ARMv7: `make ARCH=armv7 CROSS_COMPILE=<gcc prefix>`
      - **NOTE**: ARMv7 target currently still creates x86 ISO, no image format
