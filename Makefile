@@ -58,13 +58,17 @@ $(KERNEL): $(INITRD) $(KERNSRC)
 
 $(INITRD): pop-initrd $(CPIOFILES)
 	@echo -e "\033[33m  \033[1mGenerating InitCPIO\033[0m"
+	$(Q) cp -rT rootfs $(INITRDDIR)
 	$(Q) cd $(INITRDDIR); find . | cpio -o -v -O$(INITRD) &> /dev/null
 	$(Q) cp $(INITRD) $(KERNELDIR)/initrd.cpio
 
-emu:
+emu: $(ISO)
 	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot
 
-emu-debug:
+emu-floppy: $(FLOPPY)
+	$(Q) qemu-system-i386 -fda $(FLOPPY) -serial stdio -machine pc -no-reboot
+
+emu-debug: $(ISO)
 	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot -gdb tcp::1234 -S
 
 clean: clean-user
@@ -104,7 +108,7 @@ $(LUTILS): $(LUTILSSRC) $(LLIB) $(INITRDDIR)/bin
 	@cd $(INITRDDIR)/bin; rm -f echo; ln -s lutils echo
 
 $(INITRDDIR)/bin:
-	mkdir $@
+	mkdir -p $@
 
 pop-initrd: $(LINIT) $(LSHELL) $(LUTILS)
 

@@ -26,8 +26,12 @@ To be able to build Lambda OS, you need the following tools:
        - This can be found online, or from an installation of GRUB legacy
 
 To build Lambda OS:
- - (If fisrt time) Clone the `lambda-os` repository.
- - (If not first time) Run `git pull`
+ - If fisrt time
+   - Clone the `lambda-os` repository.
+   - Update submodules: `git submodule update --init`
+ - If not first time
+   - `git pull`
+   - `git submodule update`
  - Make: `make`
    - To speed up compilation, add `-j<threads>` argument to the `make` command
    - Defaults to x86 ISO

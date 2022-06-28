@@ -8,3 +8,4 @@
 *.iso
 *.log
 stage2_eltorito
+build/initrd

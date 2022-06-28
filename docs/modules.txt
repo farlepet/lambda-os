@@ -2,7 +2,8 @@ Creating Lambda OS modules
 
 *** Intro ***
 
-This document will help you get started with creating a very basic module. This will provide you with some sample code and explain all of it to you.
+This document will help you get started with creating a very basic module. This 
+will provide you with some sample code and explain all of it to you.
 
 *** Structure ***
 
@@ -14,6 +15,14 @@ found in `mod/module.h::mod_head_t`.
 All pointers to metadata must be in the same `lambda_mod_data` section.
 Pointers to functions and other data can be in any section.
 
+*** Loading Modules ***
+Loading of modules through userspace is a planned future feature.
+
+Presently, modules can be loaded in one of two ways:
+ 1. At boot, the kernel will attempt to read `/etc/modules.preload`, and if it
+    exists it will attempt to load any modules referenced by it. This file 
+    contains absolute paths to the modules.
+ 2. Modules can be loaded via the `mod load` command in kterm.
 
 
 *** Example Code ***
