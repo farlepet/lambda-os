@@ -10,3 +10,6 @@
 [submodule "lambda-modules"]
 	path = lambda-modules
 	url = git@github.com:farlepet/lambda-modules.git
+[submodule "lboot"]
+	path = lboot
+	url = git@github.com:farlepet/lboot.git
