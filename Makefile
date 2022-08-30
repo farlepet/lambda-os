@@ -49,9 +49,9 @@ $(LBOOT_BASE):
 $(FLOPPY): $(STRIPKERNEL) $(INITRD) $(LBOOT_BASE)
 	$(Q) rm -f $@
 	$(Q) cp $(LBOOT_BASE) $@
-	$(Q) mcopy -i $@ build/lboot.cfg ::/LBOOT.CFG
-	$(Q) mcopy -i $@ $(INITRD) ::/INITRD
-	$(Q) mcopy -i $@ $(STRIPKERNEL) ::/KERNEL.ELF
+	$(Q) mcopy -i $@ build/lboot.cfg ::/LBOOT/LBOOT.CFG
+	$(Q) mcopy -i $@ $(INITRD)       ::/INITRD
+	$(Q) mcopy -i $@ $(STRIPKERNEL)  ::/KERNEL.ELF
 
 $(STRIPKERNEL): $(KERNEL)
 	$(Q) $(STRIP) $< -o $@
@@ -70,6 +70,9 @@ emu: $(ISO)
 
 emu-floppy: $(FLOPPY)
 	$(Q) qemu-system-i386 -fda $(FLOPPY) -serial stdio -machine pc -no-reboot
+
+emu-floppy-dbg: $(FLOPPY)
+	$(Q) qemu-system-i386 -fda $(FLOPPY) -serial stdio -machine pc -no-reboot -gdb tcp::1234 -S
 
 emu-floppy-slow: $(FLOPPY)
 	$(Q) qemu-system-i386 -drive file=$(FLOPPY),if=floppy,format=raw,bps=12500 \
