@@ -5,7 +5,7 @@ BUILDDIR   = $(MAINDIR)/build
 INITRDDIR  = $(BUILDDIR)/initrd
 
 KERNSRC     = $(shell find $(KERNELDIR)/kernel -type f \( -iname *.h -o -iname *.c \))
-KERNEL      = $(KERNELDIR)/build/x86/ia32/pc/lambda.kern
+KERNEL      = $(KERNELDIR)/build/x86/i486/pc/lambda.kern
 STRIPKERNEL = $(BUILDDIR)/lambda.kern
 CPIOFILES   = $(shell find $(INITRDDIR))
 
@@ -57,7 +57,7 @@ $(STRIPKERNEL): $(KERNEL)
 	$(Q) $(STRIP) $< -o $@
 
 $(KERNEL): $(INITRD) $(KERNSRC)
-	$(Q) cd $(KERNELDIR) && $(MAKE) build/x86/ia32/pc/lambda.kern
+	$(Q) cd $(KERNELDIR) && $(MAKE) build/x86/i486/pc/lambda.kern
 
 $(INITRD): pop-initrd $(CPIOFILES)
 	@echo -e "\033[33m  \033[1mGenerating InitCPIO\033[0m"
