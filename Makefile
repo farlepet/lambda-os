@@ -82,9 +82,10 @@ emu-debug: $(ISO)
 	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot -gdb tcp::1234 -S
 
 clean: clean-user
-	$(Q) rm -f $(INITRD) $(ISO) $(FLOPPY)
+	$(Q) rm -f $(INITRD) $(ISO) $(FLOPPY) $(KERNEL)
 	$(Q) rm -rf $(INITRDDIR)/bin
 	$(Q) cd $(KERNELDIR) && $(MAKE) clean
+	$(Q) cd $(LBOOTDIR) && $(MAKE) clean
 
 LLIB_DIR=$(MAINDIR)/lambda-lib
 LINIT_DIR=$(MAINDIR)/lambda-lutils/linit
