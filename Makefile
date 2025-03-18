@@ -49,9 +49,9 @@ $(LBOOT_BASE):
 $(FLOPPY): $(STRIPKERNEL) $(INITRD) $(LBOOT_BASE)
 	$(Q) rm -f $@
 	$(Q) cp $(LBOOT_BASE) $@
-	$(Q) mcopy -i $@ build/lboot.cfg ::/LBOOT/LBOOT.CFG
-	$(Q) mcopy -i $@ $(INITRD)       ::/INITRD
-	$(Q) mcopy -i $@ $(STRIPKERNEL)  ::/KERNEL.ELF
+	$(Q) mcopy -D oO -i $@ build/lboot.cfg ::/LBOOT/LBOOT.CFG
+	$(Q) mcopy -D oO -i $@ $(INITRD)       ::/INITRD
+	$(Q) mcopy -D oO -i $@ $(STRIPKERNEL)  ::/KERNEL.ELF
 
 $(STRIPKERNEL): $(KERNEL)
 	$(Q) $(STRIP) $< -o $@
