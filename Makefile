@@ -9,9 +9,10 @@ KERNEL      = $(KERNELDIR)/build/x86/i486/pc/lambda.kern
 STRIPKERNEL = $(BUILDDIR)/lambda.kern
 CPIOFILES   = $(shell find $(INITRDDIR))
 
-INITRD     = $(BUILDDIR)/initrd.cpio
-FLOPPY     = $(BUILDDIR)/lambda-os.img
-ISO        = $(BUILDDIR)/lambda-os.iso
+INITRD      = $(BUILDDIR)/initrd.cpio
+INITRD_LZOP = $(BUILDDIR)/initrd.cpio.lzo
+FLOPPY      = $(BUILDDIR)/lambda-os.img
+ISO         = $(BUILDDIR)/lambda-os.iso
 
 LBOOT_BASE = $(LBOOTDIR)/boot.img
 
@@ -46,17 +47,19 @@ $(ISO): $(STRIPKERNEL) $(INITRD) $(BUILDDIR)/CD/boot/grub/stage2_eltorito
 $(LBOOT_BASE):
 	$(Q) cd $(LBOOTDIR) && $(MAKE)
 
-$(FLOPPY): $(STRIPKERNEL) $(INITRD) $(LBOOT_BASE)
+# TODO: Allow choosing decompressed initrd
+$(FLOPPY): $(STRIPKERNEL) $(INITRD) $(INITRD_LZOP) $(LBOOT_BASE)
 	$(Q) rm -f $@
 	$(Q) cp $(LBOOT_BASE) $@
 	$(Q) mcopy -D oO -i $@ build/lboot.cfg ::/LBOOT/LBOOT.CFG
-	$(Q) mcopy -D oO -i $@ $(INITRD)       ::/INITRD
+	$(Q) #mcopy -D oO -i $@ $(INITRD)       ::/INITRD
+	$(Q) mcopy -D oO -i $@ $(INITRD_LZOP)  ::/INITRD
 	$(Q) mcopy -D oO -i $@ $(STRIPKERNEL)  ::/KERNEL.ELF
 
 $(STRIPKERNEL): $(KERNEL)
 	$(Q) $(STRIP) $< -o $@
 
-$(KERNEL): $(INITRD) $(KERNSRC)
+$(KERNEL): $(INITRD_LZOP) $(KERNSRC)
 	$(Q) cd $(KERNELDIR) && $(MAKE) build/x86/i486/pc/lambda.kern
 
 $(INITRD): pop-initrd $(CPIOFILES)
@@ -64,6 +67,11 @@ $(INITRD): pop-initrd $(CPIOFILES)
 	$(Q) cp -rT rootfs $(INITRDDIR)
 	$(Q) cd $(INITRDDIR) && find . | cpio -o -v -O$(INITRD) &> /dev/null
 	$(Q) cp $(INITRD) $(KERNELDIR)/initrd.cpio
+
+$(INITRD_LZOP): $(INITRD)
+	@echo -e "\033[33m  \033[1mCompressing InitCPIO\033[0m"
+	$(Q) lzop -9 -f -o $@ $<
+	$(Q) cp $(INITRD_LZOP) $(KERNELDIR)/initrd.cpio.lzo
 
 emu: $(ISO)
 	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot
