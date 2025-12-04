@@ -1,15 +1,15 @@
 [submodule "lambda-kern"]
 	path = lambda-kern
-	url = git@github.com:farlepet/lambda-kern.git
+	url = ../lambda-kern.git
 [submodule "lambda-lib"]
 	path = lambda-lib
-	url = git@github.com:farlepet/lambda-lib.git
+	url = ../lambda-lib.git
 [submodule "lambda-lutils"]
 	path = lambda-lutils
-	url = git@github.com:farlepet/lambda-lutils.git
+	url = ../lambda-lutils.git
 [submodule "lambda-modules"]
 	path = lambda-modules
-	url = git@github.com:farlepet/lambda-modules.git
+	url = ../lambda-modules.git
 [submodule "lboot"]
 	path = lboot
-	url = git@github.com:farlepet/lboot.git
+	url = ../lboot.git
