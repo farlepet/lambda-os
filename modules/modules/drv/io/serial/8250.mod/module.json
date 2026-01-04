@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "ident": "drv.io.serial.8250",
+        "name": "x86 8250 Serial Driver",
+        "description": "Implements support for the 8250 serial controller",
+        "license": "MIT",
+        "authors": [
+            "Peter Farley <far.peter1@gmail.com>"
+        ]
+    },
+    "requirements": [
+        "tty.tty"
+    ]
+}

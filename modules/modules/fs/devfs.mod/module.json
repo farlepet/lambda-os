@@ -1,0 +1,12 @@
+{
+    "metadata": {
+        "ident": "fs.devfs",
+        "name": "DevFS Module",
+        "description": "Facilitates creation of /dev/* files associated with other modules",
+        "license": "MIT",
+        "authors": [
+            "Peter Farley <far.peter1@gmail.com>"
+        ]
+    },
+    "requirements": []
+}

@@ -1,0 +1,12 @@
+{
+    "metadata": {
+        "ident": "test.test1",
+        "name": "Test Module",
+        "description": "Module for testing Lambda module loading",
+        "license": "MIT",
+        "authors": [
+            "Peter Farley <far.peter1@gmail.com>"
+        ]
+    },
+    "requirements": []
+}

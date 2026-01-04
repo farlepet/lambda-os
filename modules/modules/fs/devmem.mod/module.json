@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "ident": "fs.devmem",
+        "name": "/dev/mem provider module",
+        "description": "Provides an interface to physical memory via /dev/mem",
+        "license": "MIT",
+        "authors": [
+            "Peter Farley <far.peter1@gmail.com>"
+        ]
+    },
+    "requirements": [
+        "fs.devfs"
+    ]
+}

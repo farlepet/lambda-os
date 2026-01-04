@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "ident": "fs.devnull",
+        "name": "/dev/{null,zero} provider module",
+        "description": "Implements /dev/null and /dev/zero files",
+        "license": "MIT",
+        "authors": [
+            "Peter Farley <far.peter1@gmail.com>"
+        ]
+    },
+    "requirements": [
+        "fs.devfs"
+    ]
+}

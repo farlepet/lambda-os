@@ -1,0 +1,12 @@
+{
+    "metadata": {
+        "ident": "tty.tty",
+        "name": "TTY support module",
+        "description": "Implements base support for creating and managing TTYs",
+        "license": "MIT",
+        "authors": [
+            "Peter Farley <far.peter1@gmail.com>"
+        ]
+    },
+    "requirements": []
+}
