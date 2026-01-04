@@ -20,7 +20,7 @@ ldoflags-y :=
 ldkflags-y :=
 
 
-include $(KERNELDIR)/kernel/module.mk
+include $(KERNELDIR)/module.mk
 
 ifneq ($(CONFIG_EMBEDDED_INITRD_LZOP),y)
     obj-$(CONFIG_EMBEDDED_INITRD) += initrd.o
@@ -35,7 +35,7 @@ STRIPKERNEL := $(KBUILDDIR)/lambda.kern.strip
 OBJS := $(filter %.o,$(patsubst $(KERNELDIR)/%.o,$(KBUILDDIR)/%.o,$(obj-y)))
 DEPS := $(filter %.d,$(patsubst %.o,%.d,$(OBJS)))
 
-cflags-y += -I$(KERNELDIR)/kernel/inc -I$(KERNELDIR) -I$(KERNELDIR)/kernel/arch/$(ARCH)/inc/ \
+cflags-y += -I$(KERNELDIR)/inc -I$(KERNELDIR) -I$(KERNELDIR)/arch/$(ARCH)/inc/ \
             -ffreestanding -Wall -Wextra -O2 \
             -pipe -g -fdata-sections -ffunction-sections \
             -DKERNEL_GIT=\"$(GIT_VERSION)\"
@@ -111,9 +111,5 @@ $(KBUILDDIR)/%.o: $(KERNELDIR)/%.s $(KERNELDIR)/.config
 	@echo -e "\033[32m    \033[1mAS\033[21m    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(AS) $(KERNEL_ASFLAGS) -c -o $@ $<
-
-$(KERNELDIR)/.config: | $(KERNELDIR)/.defconfig
-	@echo -e "\033[32m\033[1mCopying default .config\033[0m"
-	$(Q) cp $| $@
 
 -include $(DEPS)

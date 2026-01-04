@@ -7,10 +7,9 @@ USERDIR    = $(MAINDIR)/user
 
 MDIR = $(dir $(lastword $(MAKEFILE_LIST)))
 
-# TODO: Move to root
-include $(KERNELDIR)/.config
+include .config
 
-KERNSRC     = $(shell find $(KERNELDIR)/kernel -type f \( -iname *.h -o -iname *.c \))
+#KERNSRC     = $(shell find $(KERNELDIR) -type f \( -iname *.h -o -iname *.c \))
 CPIOFILES   = $(shell find $(INITRDDIR))
 
 INITRD      = $(BUILDDIR)/initrd.cpio
@@ -55,7 +54,7 @@ $(INITRD_LZOP): $(INITRD)
 	$(Q) cp $(INITRD_LZOP) $(KERNELDIR)/initrd.cpio.lzo
 
 menuconfig:
-	$(Q) cd $(KERNELDIR); menuconfig
+	$(Q) menuconfig
 
 clean: user-clean kernel-clean
 	$(Q) rm -f $(INITRD) $(ISO) $(FLOPPY) $(KERNEL)
@@ -72,4 +71,7 @@ pop-initrd: $(user-bin-y)
 		ln -s lutils ls  && \
 		ln -s lutils echo
 
+.config: | .defconfig
+	@echo -e "\033[32m\033[1mCopying default .config\033[0m"
+	$(Q) cp $| $@
 

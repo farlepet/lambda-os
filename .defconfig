@@ -1,3 +1,7 @@
+
+#
+# Lambda Kernel Configuration
+#
 CONFIG_ARCH_X86=y
 # CONFIG_ARCH_ARM32 is not set
 # CONFIG_ARCH_RISCV is not set
@@ -32,6 +36,9 @@ CONFIG_LOG_COLORCODE=y
 # CONFIG_EMBEDDED_INITRD is not set
 CONFIG_SAFETY_CHECKS=y
 CONFIG_STRICTNESS=255
+CONFIG_CRYPTO=y
+CONFIG_CRYPTO_COMP=y
+CONFIG_CRYPTO_COMP_LZOP=y
 
 #
 # Processes and threads
@@ -42,6 +49,7 @@ CONFIG_PROC_USER_STACK_SIZE_MAX=65536
 # CONFIG_PROC_STACK_GUARD is not set
 # CONFIG_KTASK_DEBUGGER is not set
 # end of Processes and threads
+# end of Lambda Kernel Configuration
 
 #
 # General build options

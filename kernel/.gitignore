@@ -5,10 +5,6 @@
 *.ll
 *.d
 
-# Build config
-.config
-.config.old
-
 # Libraries
 *.lib
 *.a

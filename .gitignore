@@ -13,3 +13,6 @@ build/initrd.*
 build/kernel
 build/user
 initrd.*
+
+.config
+.config.old
