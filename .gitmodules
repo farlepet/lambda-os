@@ -1,9 +1,3 @@
-[submodule "lambda-lib"]
-	path = lambda-lib
-	url = ../lambda-lib.git
-[submodule "lambda-lutils"]
-	path = lambda-lutils
-	url = ../lambda-lutils.git
 [submodule "lboot"]
 	path = lboot
 	url = ../lboot.git
