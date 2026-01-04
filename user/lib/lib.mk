@@ -23,7 +23,7 @@ $(LIB_ARCHIVE): $(LIBOBJS) $(CRT0)
 	$(Q) $(AR) rsc $@ $(LIBOBJS)
 
 $(LIBBUILDDIR)/%.o: $(LIBDIR)/%.c
-	@echo -e "\033[32m    \033[1mCC\033[21m    \033[34m$<\033[0m"
+	@echo -e "\033[32m    \033[1mCC    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CC) $(LIBCFLAGS) -MMD -MP -c -o $@ $<
 

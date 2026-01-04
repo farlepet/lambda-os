@@ -2,7 +2,7 @@
 
 #include <arch/io/ioport.h>
 
-#include "tty/tty.mod/tty.h"
+#include "modules/tty/tty.mod/tty.h"
 #include "8250.h"
 
 tty_handle_t *tty_serial_0;

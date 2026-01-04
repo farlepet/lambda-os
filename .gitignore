@@ -12,6 +12,7 @@ build/initrd
 build/initrd.*
 build/kernel
 build/user
+build/modules
 
 .config
 .config.old

@@ -2,7 +2,7 @@
 #include <err/error.h>
 #include <string.h>
 
-#include "fs/devfs.mod/devfs.h"
+#include "modules/fs/devfs.mod/devfs.h"
 
 static devfs_module_handle_t *_devfs_handle = NULL;
 static struct {

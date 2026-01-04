@@ -136,6 +136,8 @@ typedef struct
 
 extern char *sht_strings[SHT_PREINIT_ARRAY+1];
 
+#define SHN_UNDEF 0
+#define SHN_ABS   0xfff1
 
 typedef struct
 {

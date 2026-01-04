@@ -18,11 +18,11 @@ static llist_t loaded_modules;
 /* TODO: Better method for choosing where to place module */
 static uintptr_t _current_base = KERNEL_OFFSET + 0x10000000;
 
-static lambda_mod_head_t *_module_place(const Elf32_Ehdr *elf, const lambda_mod_head_t *mod_head, uintptr_t baseaddr, module_entry_t *mod_ent, symbol_t *symbols);
+static lambda_mod_head_t *_module_place(const Elf32_Ehdr *elf, uintptr_t baseaddr, module_entry_t *mod_ent, symbol_t *symbols);
 
-int module_read(kfile_hand_t *file, lambda_mod_head_t **head, uintptr_t *base, Elf32_Ehdr **elf) {
+int module_read(kfile_hand_t *file, uintptr_t *base, Elf32_Ehdr **elf) {
     Elf32_Ehdr        *elf_data;
-    Elf32_Shdr        *mod_section;
+    const Elf32_Shdr  *mod_section;
     lambda_mod_head_t *mod_head;
     kstat_t            file_stat;
 
@@ -49,7 +49,7 @@ int module_read(kfile_hand_t *file, lambda_mod_head_t **head, uintptr_t *base, E
         kfree(elf_data);
         return -EUNSPEC;
     }
-    if(elf_find_section(elf_data, &mod_section, LAMBDA_MODULE_SECTION_NAME)) {
+    if(elf_find_section(elf_data, LAMBDA_MODULE_SECTION_NAME, &mod_section)) {
         kfree(elf_data);
         return -EUNSPEC;
     }
@@ -60,7 +60,6 @@ int module_read(kfile_hand_t *file, lambda_mod_head_t **head, uintptr_t *base, E
         return -EUNSPEC;
     }
 
-    *head = mod_head;
     *base = mod_section->sh_addr;
 
     if(elf) {
@@ -103,23 +102,19 @@ static int _check_requirements(lambda_mod_head_t *mod_head) {
 
 int module_install(kfile_hand_t *file) {
     /* @todo A lot of work is needed here in order to prevent memory leaks */
-    lambda_mod_head_t *mod_head;
     lambda_mod_head_t *mod_head_reloc;
     uintptr_t          mod_base;
     Elf32_Ehdr        *mod_elf;
     symbol_t          *symbols;
     
     kdebug(DEBUGSRC_MODULE, ERR_DEBUG, "module_install: Reading module");
-    if(module_read(file, &mod_head, &mod_base, &mod_elf)) {
+    if(module_read(file, &mod_base, &mod_elf)) {
         return -EUNSPEC;
     }
 
     kdebug(DEBUGSRC_MODULE, ERR_TRACE, "module_install: Generating module entry");
-    const char *ident = (char *)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.ident);
-    module_entry_t *modent = (module_entry_t *)kmalloc(sizeof(module_entry_t) + strlen(ident) + 1);
+    module_entry_t *modent = (module_entry_t *)kmalloc(sizeof(module_entry_t) /*+ strlen(ident) + 1*/);
     memset(modent, 0, sizeof(module_entry_t));
-    modent->ident = (char *)((uintptr_t)modent + sizeof(module_entry_t));
-    memcpy(modent->ident, ident, strlen(ident) + 1);
 
     kdebug(DEBUGSRC_MODULE, ERR_TRACE, "module_install: Reading symbol table");
     if(elf_load_symbols(mod_elf, &symbols)) {
@@ -132,7 +127,7 @@ int module_install(kfile_hand_t *file) {
      * big deal since the calling process (should) be priviledged. Alternatively,
      * we can do a partial placement first. */
     kdebug(DEBUGSRC_MODULE, ERR_TRACE, "module_install: Placing and relocating module");
-    mod_head_reloc = _module_place(mod_elf, mod_head, _current_base, modent, symbols);
+    mod_head_reloc = _module_place(mod_elf, _current_base, modent, symbols);
     if(mod_head_reloc == NULL) {
         /* @todo Remove module */
         kfree(mod_elf);
@@ -177,43 +172,56 @@ int module_uninstall(module_entry_t *mod) {
 
 
 typedef struct {
-    uintptr_t addr_orig;
-    uintptr_t addr_new;
+    /** Section index */
+    uint32_t  section;
+    /** New virtual address */
+    uintptr_t addr_virt;
+    /** Physical address */
     uintptr_t addr_phys;
+    /** Size in bytes */
     size_t    size;
 } elf_reloc_t;
 
-static uintptr_t _translate_addr(const elf_reloc_t *relocs, uintptr_t addr) {
-    size_t i = 0;
-    while(relocs[i].addr_new != 0xFFFFFFFF) {
-        if((addr >= relocs[i].addr_orig) &&
-           (addr < (relocs[i].addr_orig + relocs[i].size))) {
-            return relocs[i].addr_new + (addr - relocs[i].addr_orig);
+static inline const elf_reloc_t *_get_reloc(const elf_reloc_t *relocs, uint32_t section) {
+    uint32_t i = 0;
+    while (relocs[i].section != 0xFFFFFFFF) {
+        if (relocs[i].section == section) {
+            return &relocs[i];
         }
         i++;
     }
 
-    /* TODO: Possibly return 0 as error */
-    return addr;
+    return NULL;
 }
 
-static uintptr_t _translate_addr_phys(const elf_reloc_t *relocs, uintptr_t addr) {
-    size_t i = 0;
-    while(relocs[i].addr_new != 0xFFFFFFFF) {
-        if((addr >= relocs[i].addr_orig) &&
-           (addr < (relocs[i].addr_orig + relocs[i].size))) {
-            return relocs[i].addr_phys + (addr - relocs[i].addr_orig);
-        }
-        i++;
+static int _translate_symbol(const elf_reloc_t *relocs, symbol_t *sym) {
+    const elf_reloc_t *reloc = _get_reloc(relocs, sym->section);
+    if (!reloc) {
+        return -ENOENT;
     }
+
+    sym->addr = reloc->addr_virt;
 
     return 0;
 }
 
-static int _do_reloc(uintptr_t baseaddr, const elf_reloc_t *relocs, uintptr_t symaddr, const Elf32_Rel *rel) {
-    (void)baseaddr;
-    uintptr_t dataaddr = _translate_addr(relocs, rel->r_offset);
-    
+static uintptr_t _translate_addr(const elf_reloc_t *relocs, uint32_t section, uintptr_t addr) {
+    const elf_reloc_t *reloc = _get_reloc(relocs, section);
+    if (!reloc) {
+        return 0;
+    }
+
+    return reloc->addr_virt + addr;
+}
+
+static int _do_reloc(const elf_reloc_t *relocs, uintptr_t symaddr, const Elf32_Rel *rel, uint32_t section) {
+    uintptr_t dataaddr = _translate_addr(relocs, section, rel->r_offset);
+
+    if (dataaddr < 0x1000) {
+        kdebug(DEBUGSRC_MODULE, ERR_WARN, "_do_reloc: Bad address translation (_, %08x, %x, %u) %u", symaddr, rel->r_info, section);
+        return -EUNSPEC;
+    }
+
     switch(ELF32_R_TYPE(rel->r_info)) {
         case R_386_NONE:
             break;
@@ -224,77 +232,117 @@ static int _do_reloc(uintptr_t baseaddr, const elf_reloc_t *relocs, uintptr_t sy
             *((uint32_t *)dataaddr) += (symaddr - dataaddr);
             break;
         case R_386_RELATIVE:
-            *((uint32_t *)dataaddr) = _translate_addr(relocs, *((uint32_t *)dataaddr));
+            *((uint32_t *)dataaddr) = _translate_addr(relocs, section, *((uint32_t *)dataaddr));
             break;
         case R_386_GLOB_DAT:
         case R_386_JMP_SLOT:
             *((uint32_t *)dataaddr) = symaddr;
             break;
         default:
-            kdebug(DEBUGSRC_MODULE, ERR_WARN, "_module_apply_relocs: Unhandled relocation type: %d", ELF32_R_TYPE(rel->r_info));
+            kdebug(DEBUGSRC_MODULE, ERR_WARN, "_do_reloc: Unhandled relocation type: %d", ELF32_R_TYPE(rel->r_info));
             return -EUNSPEC;
     }
-    
-    kdebug(DEBUGSRC_MODULE, ERR_TRACE, "_do_reloc: Wrote %08X to %08X [%d]", *(uint32_t *)dataaddr, dataaddr, ELF32_R_TYPE(rel->r_info));
+
+    /*kdebug(DEBUGSRC_MODULE, ERR_TRACE, "_do_reloc: Wrote %08X to %08X [%d]", *(uint32_t *)dataaddr, dataaddr, ELF32_R_TYPE(rel->r_info));*/
 
     return 0;
 }
 
-#define _RELOC_NEED_SYM(R) ((ELF32_R_TYPE(R.r_info) != R_386_NONE) && \
-                            (ELF32_R_TYPE(R.r_info) != R_386_RELATIVE))
+static int _find_undefined_symbol(const char *ident, uintptr_t *symaddr) {
+    if (!module_symbol_find_kernel(ident, symaddr)) {
+        return 0;
+    }
 
-static int _module_apply_relocs(const Elf32_Ehdr *elf, const elf_reloc_t *relocs, const symbol_t *symbols, uintptr_t baseaddr) {
-    Elf32_Shdr *elf_symtab = NULL;
-    Elf32_Shdr *elf_strtab = NULL;
-    if(elf_find_section(elf, &elf_symtab, ".dynsym") ||
-       elf_find_section(elf, &elf_strtab, ".dynstr")) {
+    /* Check other loaded modules */
+    llist_iterator_t iter;
+    module_entry_t  *ent;
+    llist_iterator_init(&loaded_modules, &iter);
+    while (llist_iterate(&iter, (void **)&ent)) {
+        if (ent->symbols && !module_symbol_find_module(ident, symaddr, ent->symbols)) {
+            return 0;
+        }
+    }
+
+    return -ENOENT;
+}
+
+/* TODO: Move to elf.c */
+static int _find_symbol(const Elf32_Ehdr *elf, const symbol_t *symbols, uint32_t table, uint32_t index, uintptr_t *value) {
+    const Elf32_Shdr *sections = (Elf32_Shdr *)((uintptr_t)elf + elf->e_shoff);
+
+    const Elf32_Shdr *symtab = &sections[table];
+    if ((index * symtab->sh_entsize) > symtab->sh_size) {
+        kdebug(DEBUGSRC_MODULE, ERR_WARN, "_handle_reloc: Symbol index %u out of bounds", index);
         return -EUNSPEC;
     }
-    Elf32_Sym *syms = (Elf32_Sym *)((uintptr_t)elf + elf_symtab->sh_offset);
-    char      *strs = (char *)((uintptr_t)elf + elf_strtab->sh_offset);
 
-    const Elf32_Shdr *sects = (Elf32_Shdr *)((uintptr_t)elf + elf->e_shoff);
-    
-    for(size_t i = 0; i < elf->e_shnum; i++) {
+    const Elf32_Sym *sym = &((Elf32_Sym *)((uintptr_t)elf + symtab->sh_offset))[index];
+
+    if (sym->st_shndx == SHN_ABS) {
+        *value = sym->st_value;
+    } else if (sym->st_shndx == SHN_UNDEF) {
+        const Elf32_Shdr *strtab = &sections[symtab->sh_link];
+        const char *ident = (const char *)((uintptr_t)elf + strtab->sh_offset + sym->st_name);
+
+        /* TODO: Support weak symbols? */
+        if (_find_undefined_symbol(ident, value)) {
+            kdebug(DEBUGSRC_MODULE, ERR_WARN, "_find_symbol: Could not find external symbol `%s`", ident);
+            return -ENOENT;
+        }
+    } else {
+        for (uint32_t i = 0; symbols[i].addr != 0xFFFFFFFF; i++) {
+            if (symbols[i].section == sym->st_shndx) {
+                *value = symbols[i].addr + sym->st_value;
+
+                return 0;
+            }
+        }
+
+        kdebug(DEBUGSRC_MODULE, ERR_WARN, "_find_symbol: Could not find internal symbol [%u, %u, %u]",
+               table, index, sym->st_shndx);
+
+
+        return -ENOENT;
+    }
+
+    return 0;
+}
+
+#define _RELOC_NEED_SYM(R) ((ELF32_R_TYPE(R->r_info) != R_386_NONE) && \
+                            (ELF32_R_TYPE(R->r_info) != R_386_RELATIVE))
+
+static int _handle_reloc(const Elf32_Ehdr *elf, const elf_reloc_t *relocs, const symbol_t *symbols, const Elf32_Rel *rel, uint32_t symtab, uint32_t shndx) {
+    uintptr_t symaddr = 0;
+
+    if(_RELOC_NEED_SYM(rel)) {
+        uint32_t index = ELF32_R_SYM(rel->r_info);
+
+        if (_find_symbol(elf, symbols, symtab, index, &symaddr)) {
+            kdebug(DEBUGSRC_MODULE, ERR_WARN, "_handle_reloc: Could not find symbol [%u, %u]", symtab, index);
+            return -ENOENT;
+        }
+    }
+
+    if(_do_reloc(relocs, symaddr, rel, shndx)) {
+        return -EUNSPEC;
+    }
+
+    return 0;
+}
+
+static int _module_apply_relocs(const Elf32_Ehdr *elf, const elf_reloc_t *relocs, const symbol_t *symbols) {
+    const Elf32_Shdr *sects = elf_get_sections(elf);
+
+    for(uint32_t i = 0; i < elf->e_shnum; i++) {
         if(sects[i].sh_type != SHT_REL) { continue; }
 
-        const Elf32_Rel *rel    = (Elf32_Rel *)((uintptr_t)elf + sects[i].sh_offset);
-        size_t           n_rels = sects[i].sh_size / sects[i].sh_entsize;
-        for(size_t j = 0; j < n_rels; j++) {
-            uintptr_t symaddr = 0;
-            if(_RELOC_NEED_SYM(rel[j])) {
-                size_t sidx = ELF32_R_SYM(rel[j].r_info);
-                char *ident = &strs[syms[sidx].st_name];
-                kdebug(DEBUGSRC_MODULE, ERR_TRACE, "_module_apply_relocs: %08X, %08X [%s]",
-                       rel[j].r_offset, rel[j].r_info, ident);
-                
-                if(!module_symbol_find_kernel(ident, &symaddr)) {
-                } else if(!module_symbol_find_module(ident, &symaddr, symbols)) {
-                    symaddr = _translate_addr(relocs, symaddr);
-                } else {
-                    /* Check other loaded modules */
-                    llist_iterator_t iter;
-                    module_entry_t  *ent;
-                    int              found = 0;
-                    llist_iterator_init(&loaded_modules, &iter);
-                    while(!found &&
-                        llist_iterate(&iter, (void **)&ent)) {
-                        if(ent->symbols &&
-                        !module_symbol_find_module(ident, &symaddr, ent->symbols)) {
-                            found = 1;
-                        }
-                    }
-                    if (!found) {
-                        kdebug(DEBUGSRC_MODULE, ERR_WARN, "_module_apply_relocs: Could not find symbol %s", ident);
-                        return -EUNSPEC;
-                    }
-                }
-            } else {
-                kdebug(DEBUGSRC_MODULE, ERR_TRACE, "_module_apply_relocs: %08X, %08X",
-                       rel[j].r_offset, rel[j].r_info);
-            }
+        uint32_t symtab      = sects[i].sh_link;
+        uint32_t target_sect = sects[i].sh_info;
 
-            if(_do_reloc(baseaddr, relocs, symaddr, &rel[j])) {
+        const Elf32_Rel *rel    = (Elf32_Rel *)((uintptr_t)elf + sects[i].sh_offset);
+        uint32_t         n_rels = sects[i].sh_size / sects[i].sh_entsize;
+        for(uint32_t j = 0; j < n_rels; j++) {
+            if (_handle_reloc(elf, relocs, symbols, &rel[j], symtab, target_sect)) {
                 return -EUNSPEC;
             }
         }
@@ -311,89 +359,152 @@ static void *_alloc_map(uintptr_t virt, size_t len) {
     return paddr;
 }
 
-static lambda_mod_head_t *_module_place(const Elf32_Ehdr *elf, const lambda_mod_head_t *mod_head, uintptr_t baseaddr, module_entry_t *mod_ent, symbol_t *symbols) {
-    Elf32_Phdr *prog = (Elf32_Phdr *)((uintptr_t)elf + elf->e_phoff);
-    
-    size_t n_loads = 0;
-    for(size_t i = 0; i < elf->e_phnum; i++) {
-        if(prog[i].p_type == PT_LOAD) {
-            n_loads++;
-        }
-    }
-    elf_reloc_t *relocs = (elf_reloc_t *)kmalloc((n_loads+1) * sizeof(elf_reloc_t));
-
-    size_t ridx = 0;
-    /* NOTE: This is assuming that the binary addresses relative to zero */
-    /* Find the most effecient way to allocate and map required memory */
-    uintptr_t startaddr = 0;
-    uintptr_t lastaddr  = 0;
-    for(size_t i = 0; i < elf->e_phnum; i++) {
-        if(prog[i].p_type != PT_LOAD) { continue; }
-        if(prog[i].p_vaddr > ((lastaddr + 0x2000) & 0xFFFFF000)) {
-            /* We found a gap, allocate the previous block */
-            relocs[ridx].addr_phys = (uintptr_t)_alloc_map(baseaddr + startaddr, lastaddr - startaddr);
-            relocs[ridx].addr_orig = startaddr;
-            relocs[ridx].addr_new  = baseaddr + startaddr;
-            relocs[ridx].size      = lastaddr - startaddr;
-            ridx++;
-
-            startaddr = prog[i].p_vaddr;
-        }
-        lastaddr = prog[i].p_vaddr + prog[i].p_memsz;
-    }
-    relocs[ridx].addr_phys = (uintptr_t)_alloc_map(baseaddr + startaddr, lastaddr - startaddr);
-    relocs[ridx].addr_orig = startaddr;
-    relocs[ridx].addr_new  = baseaddr + startaddr;
-    relocs[ridx].size      = lastaddr - startaddr;
-    ridx++;
-    relocs[ridx].addr_orig = 0xFFFFFFFF;
-    relocs[ridx].addr_new  = 0xFFFFFFFF;
-    relocs[ridx].size      = 0;
-
-
-    for(size_t i = 0; i < elf->e_phnum; i++) {
-        switch(prog[i].p_type) {
-            case PT_LOAD: {
-                void *phys = (void *)_translate_addr_phys(relocs, prog[i].p_vaddr);
-
-                /* Copy data and/or clear memory */
-                if(prog[i].p_filesz) {
-                    memcpy(phys, (void *)((uintptr_t)elf + prog[i].p_offset), prog[i].p_filesz);
-                }
-                if(prog[i].p_filesz < prog[i].p_memsz) {
-                    memset(phys + prog[i].p_filesz, 0, prog[i].p_memsz - prog[i].p_filesz);
-                }
-            } break;
-        }
+#define FORCE_ALIGN(V, AM) \
+    if ((V) & (AM)) { \
+        (V) = (((V) + (AM)) & ~(AM)); \
     }
 
-    if(_module_apply_relocs(elf, relocs, symbols, baseaddr)) {
+static lambda_mod_head_t *_module_place(const Elf32_Ehdr *elf, uintptr_t baseaddr, module_entry_t *mod_ent, symbol_t *symbols) {
+    const Elf32_Shdr *sects = elf_get_sections(elf);
+
+    /* TODO: Differentiate R/W/X sections */
+    uintptr_t prog_base   = baseaddr;
+    uintptr_t prog_size   = 0;
+    uintptr_t nobits_base = 0;
+    uintptr_t nobits_size = 0;
+
+    uint32_t n_relocs = 0;
+
+    /* Get section count and required memory */
+    for (uint32_t i = 0; i < elf->e_shnum; i++) {
+        const Elf32_Shdr *sect = &sects[i];
+
+        if (sect->sh_addr) {
+            kdebug(DEBUGSRC_MODULE, ERR_WARN, "_module_place: Section %u has address set, which is not supported", i);
+            return NULL;
+        }
+
+        /* Arbitrary max alignment */
+        if (sect->sh_addralign > 0x80) {
+            kdebug(DEBUGSRC_MODULE, ERR_WARN, "_module_place: Section %u address alignment too large: %u",
+                   i, sect->sh_addralign);
+            return NULL;
+        }
+
+        /* TODO: Validate that alignment is following spec */
+        uint32_t align_mask = sect->sh_addralign ? (sect->sh_addralign - 1) : 0;
+
+        switch (sect->sh_type) {
+            case SHT_PROGBITS:
+                /* Ensure base is at max required alignment */
+                FORCE_ALIGN(prog_base, align_mask);
+                FORCE_ALIGN(prog_size, align_mask);
+                prog_size += sect->sh_size;
+                n_relocs++;
+                break;
+            case SHT_NOBITS:
+                /* Ensure base is at max required alignment */
+                FORCE_ALIGN(nobits_base, align_mask);
+                FORCE_ALIGN(nobits_size, align_mask);
+                nobits_size += sect->sh_size;
+                n_relocs++;
+                break;
+            default:
+                break;
+        }
+    }
+
+    /* Place nobits one page after prog (TODO use page size def) */
+    nobits_base = (prog_base + 0x1000) & ~0xFFF;
+
+    elf_reloc_t *relocs = kmalloc((n_relocs + 1) * sizeof(elf_reloc_t));
+
+    uintptr_t prog_phys   = (uintptr_t)_alloc_map(prog_base, prog_size);
+    /* TODO: Mark pages read-only */
+    uintptr_t nobits_phys = (uintptr_t)_alloc_map(nobits_base, nobits_size);
+    memset((void *)nobits_phys, 0, nobits_size);
+
+    uintptr_t prog_offset   = 0;
+    uintptr_t nobits_offset = 0;
+
+    /* Create actual mappings, copy in data */
+    uint32_t j = 0;
+    for (uint32_t i = 0; i < elf->e_shnum; i++) {
+        const Elf32_Shdr *sect = &sects[i];
+
+        uint32_t align_mask = sect->sh_addralign ? (sect->sh_addralign - 1) : 0;
+
+        switch (sect->sh_type) {
+            case SHT_PROGBITS:
+                FORCE_ALIGN(prog_offset, align_mask);
+
+                relocs[j].section = i;
+                relocs[j].addr_virt = prog_base + prog_offset;
+                relocs[j].addr_phys = prog_phys + prog_offset;
+                relocs[j].size = sect->sh_size;
+
+                /*kdebug(DEBUGSRC_MODULE, ERR_TRACE, "_module_place: Section %u @ %08x, %d bytes",
+                       i, relocs[j].addr_virt, relocs[j].size);*/
+
+                memcpy((void *)relocs[j].addr_phys, (void *)((uintptr_t)elf + sect->sh_offset), relocs[j].size);
+
+                j++;
+                prog_offset += sect->sh_size;
+                break;
+            case SHT_NOBITS:
+                /* Ensure base is at max required alignment */
+                FORCE_ALIGN(nobits_offset, align_mask);
+
+                relocs[j].section = i;
+                relocs[j].addr_virt = nobits_base + nobits_offset;
+                relocs[j].addr_phys = nobits_phys + nobits_offset;
+                relocs[j].size = sect->sh_size;
+
+                /*kdebug(DEBUGSRC_MODULE, ERR_TRACE, "_module_place: Section %u @ %08x, %d bytes",
+                       i, relocs[j].addr_virt, relocs[j].size);*/
+
+                j++;
+                nobits_offset += sect->sh_size;
+                break;
+            default:
+                break;
+        }
+    }
+
+    relocs[j].section   = 0xFFFFFFFF;
+    relocs[j].addr_virt = 0xFFFFFFFF;
+    relocs[j].addr_phys = 0xFFFFFFFF;
+    relocs[j].size      = 0;
+
+    kdebug(DEBUGSRC_MODULE, ERR_TRACE, "Translating module symbol table");
+    for(uint32_t i = 0; symbols[i].addr != 0xFFFFFFFF; i++) {
+        _translate_symbol(relocs, &symbols[i]);
+        kdebug(DEBUGSRC_MODULE, ERR_TRACE, "  %3d => %08x [%3u, %s]", i, symbols[i].addr, symbols[i].section, symbols[i].name);
+    }
+
+    if(_module_apply_relocs(elf, relocs, symbols)) {
+        /* TODO: Free and unmap prog and nobits */
         kfree(relocs);
         return NULL;
     }
 
-    kdebug(DEBUGSRC_MODULE, ERR_TRACE, "Translating module symbol table");
-    for(size_t i = 0; symbols[i].addr != 0xFFFFFFFF; i++) {
-        symbols[i].addr = _translate_addr(relocs, symbols[i].addr);
-        kdebug(DEBUGSRC_MODULE, ERR_TRACE, "  %d: [%s] => %08X", i, symbols[i].name, symbols[i].addr);
-    }
-    
-    kdebug(DEBUGSRC_MODULE, ERR_TRACE, "Mod func: %p -> %p", mod_head->function, mod_ent->func);
-    
-    Elf32_Shdr *mod_section;
-    if(elf_find_section(elf, &mod_section, LAMBDA_MODULE_SECTION_NAME)) {
+    uint32_t mod_section;
+    if(elf_find_section_idx(elf, LAMBDA_MODULE_SECTION_NAME, &mod_section)) {
+        /* TODO: Free and unmap prog and nobits */
+        kfree(relocs);
         return NULL;
     }
-    lambda_mod_head_t *new_mod_head = (lambda_mod_head_t *)_translate_addr(relocs, mod_section->sh_addr);
+    lambda_mod_head_t *new_mod_head = (lambda_mod_head_t *)_translate_addr(relocs, mod_section, 0);
     mod_ent->func    = new_mod_head->function;
     mod_ent->symbols = symbols;
+    mod_ent->ident   = new_mod_head->metadata.ident;
+
+    kdebug(DEBUGSRC_MODULE, ERR_TRACE, "Mod func: %p", mod_ent->func);
 
     kfree(relocs);
 
     return new_mod_head;
 }
-
-
 
 
 int module_start_thread(module_entry_t *mod, void (*entry)(void *), void *data, const char *name) {
@@ -409,7 +520,7 @@ int module_start_thread(module_entry_t *mod, void (*entry)(void *), void *data, 
         name = _name;
     }
 
-    size_t tidx = 0;
+    uint32_t tidx = 0;
     for(; tidx < MOD_THREAD_MAX; tidx++) {
         if(mod->threads[tidx] == 0) {
             break;

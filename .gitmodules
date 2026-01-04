@@ -1,3 +1,6 @@
 [submodule "lboot"]
 	path = lboot
 	url = ../lboot.git
+[submodule "lib/lambda-json"]
+	path = lib/lambda-json
+	url = ../lambda-json.git

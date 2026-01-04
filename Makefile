@@ -1,9 +1,10 @@
-MAINDIR    = $(CURDIR)
-KERNELDIR  = $(MAINDIR)/kernel
-LBOOTDIR   = $(MAINDIR)/lboot
-BUILDDIR   = $(MAINDIR)/build
-INITRDDIR  = $(BUILDDIR)/initrd
-USERDIR    = $(MAINDIR)/user
+MAINDIR    := $(CURDIR)
+KERNELDIR  := $(MAINDIR)/kernel
+LBOOTDIR   := $(MAINDIR)/lboot
+BUILDDIR   := $(MAINDIR)/build
+INITRDDIR  := $(BUILDDIR)/initrd
+USERDIR    := $(MAINDIR)/user
+MODULESDIR := $(MAINDIR)/modules
 
 MDIR = $(dir $(lastword $(MAKEFILE_LIST)))
 
@@ -34,6 +35,7 @@ include mk/compiler.mk
 
 include $(KERNELDIR)/kernel.mk
 include $(USERDIR)/user.mk
+include $(MODULESDIR)/module.mk
 
 include mk/media.mk
 
@@ -62,14 +64,17 @@ clean: user-clean kernel-clean
 	$(Q) cd $(LBOOTDIR) && $(MAKE) clean
 
 
-pop-initrd: $(user-bin-y)
+pop-initrd: $(user-bin-y) $(modules-y)
 	$(Q) mkdir -p $(INITRDDIR)/bin
 	$(Q) cp $(user-bin-y) $(INITRDDIR)/bin
-	@# Add links (TODO: Make this cleaner)
+# Add links (TODO: Make this cleaner)
 	$(Q) cd $(INITRDDIR)/bin && rm -f cat ls echo && \
 		ln -s lutils cat && \
 		ln -s lutils ls  && \
 		ln -s lutils echo
+# Copy in build modules
+	$(Q) mkdir -p $(INITRDDIR)/modules
+	$(Q) cp $(modules-y) $(INITRDDIR)/modules
 
 .config: | .defconfig
 	@echo -e "\033[32m\033[1mCopying default .config\033[0m"

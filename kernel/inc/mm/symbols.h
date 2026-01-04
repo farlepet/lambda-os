@@ -10,6 +10,7 @@ typedef struct symbol {
     char    *name; //!< Symbol name
     uint32_t addr; //!< Start address of symbol
     uint32_t size; //!< Length of address space bounded by symbol
+    uint32_t section; //!< ELF section symbol is from, if applicable
 } symbol_t;
 
 extern symbol_t sym_objects[];

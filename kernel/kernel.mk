@@ -13,7 +13,8 @@ cflags-y  :=
 ldflags-y :=
 
 # Shared library linking step flags
-ldsflags-y :=
+ldsflags-y := -pic -shared
+#-T $(HWDIR)/hw.ld
 # Relocatable object linking step flags
 ldoflags-y :=
 # Final kernel output linking step flags
@@ -29,8 +30,9 @@ obj-$(CONFIG_EMBEDDED_INITRD_LZOP) += initrd.lzo.o
 
 KBUILDDIR   := $(BUILDDIR)/kernel/$(ARCH)/$(CPU)/$(HW)
 
-KERNEL      := $(KBUILDDIR)/lambda.kern
-STRIPKERNEL := $(KBUILDDIR)/lambda.kern.strip
+KERNEL        := $(KBUILDDIR)/lambda.kern
+STRIPKERNEL   := $(KBUILDDIR)/lambda.kern.strip
+KERNEL_SHARED := $(KBUILDDIR)/lambda.so
 
 OBJS := $(filter %.o,$(patsubst $(KERNELDIR)/%.o,$(KBUILDDIR)/%.o,$(obj-y)))
 DEPS := $(filter %.d,$(patsubst %.o,%.d,$(OBJS)))
@@ -76,9 +78,10 @@ $(KBUILDDIR)/lambda.o: $(OBJS)
 	@echo -e "\033[33m  \033[1mLinking sources\033[0m"
 	$(Q) $(LD) $(KERNEL_LDOFLAGS) -r -o $@ $(OBJS)
 
-$(KBUILDDIR)/lambda.shared: $(KBUILDDIR)/lambda.o
+$(KERNEL_SHARED): $(KBUILDDIR)/lambda.o
 	@echo -e "\033[33m  \033[1mLinking kernel\033[0m"
-	$(Q) $(CC) $(KERNEL_LDSFLAGS) -shared -o $@ $< -T $(HWDIR)/hw.ld
+	$(Q) $(LD) $(KERNEL_LDSFLAGS) -o $@ $< 
+	$(Q) $(STRIP) --strip-unneeded $@
 
 $(KERNEL): $(KBUILDDIR)/lambda.o
 	@echo -e "\033[33m  \033[1mProducing kernel executable\033[0m"
@@ -103,12 +106,12 @@ kernel-scan-build:
 
 
 $(KBUILDDIR)/%.o: $(KERNELDIR)/%.c $(MAINDIR)/.config
-	@echo -e "\033[32m    \033[1mCC\033[21m    \033[34m$<\033[0m"
+	@echo -e "\033[32m    \033[1mCC    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CC) $(KERNEL_CFLAGS) -MMD -MP -c -o $@ $<
 
 $(KBUILDDIR)/%.o: $(KERNELDIR)/%.s $(MAINDIR)/.config
-	@echo -e "\033[32m    \033[1mAS\033[21m    \033[34m$<\033[0m"
+	@echo -e "\033[32m    \033[1mAS    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(AS) $(KERNEL_ASFLAGS) -c -o $@ $<
 

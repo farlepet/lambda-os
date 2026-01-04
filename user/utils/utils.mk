@@ -29,7 +29,7 @@ UTILSDEPS := $(filter %.d,$(patsubst %.o,%.d,$(UTILSOBJS)))
 UTILS_LDFLAGS := -T $(LIBDIR)/linker.ld
 
 $(UTILSBUILDDIR)%.o: $(UTILSDIR)/%.c
-	@echo -e "\033[32m    \033[1mCC\033[21m    \033[34m$<\033[0m"
+	@echo -e "\033[32m    \033[1mCC    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CC) $(UTILS_CFLAGS) $(TARGET_CFLAGS) -MMD -MP -c -o $@ $<
 

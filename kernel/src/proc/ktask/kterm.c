@@ -307,74 +307,8 @@ static int kterm_mod(int argc, char **argv) {
     if(!strcmp(argv[1], "help")) {
         kprintf("mod help\n"
                 "  help:        Displays this help message\n"
-                "  info <file>: Display information about the specified module\n"
                 "  load <file>: Load the specified module\n"
                 "  symlist:     List currently exported symbols\n");
-    } else if(!strcmp(argv[1], "info")) {
-        if(argc < 3) {
-            kprintf("No module specified!\n");
-            return 1;
-        }
-
-        kfile_t *mod_file = fs_find_file(NULL, argv[2]);
-        if(!mod_file) {
-            kprintf("Could not find %s\n", argv[2]);
-            return 1;
-        }
-        kfile_hand_t *mod  = fs_handle_create_open(mod_file,  OFLAGS_READ);
-
-        kprintf("Loading module info.\n");
-        lambda_mod_head_t *mod_head;
-        uintptr_t          mod_base;
-        Elf32_Ehdr        *mod_elf;
-        if(module_read(mod, &mod_head, &mod_base, &mod_elf)) {
-            kprintf("Issue while loading module section.\n");
-            return 1;
-        }
-
-        kprintf("Module info:\n"
-                "  Magic:   %08X\n"
-                "  Version: %hu\n"
-                "  Kernel:  %hu.%hu.%hu\n",
-                mod_head->head_magic,
-                mod_head->head_version,
-                mod_head->kernel.major,
-                mod_head->kernel.minor,
-                mod_head->kernel.patch);
-        
-        kprintf("Metadata:\n"
-                "  Identifier:   %s\n"
-                "  Name:         %s\n"
-                "  Description:  %s\n"
-                "  License:      %s\n"
-                "  Authors:      ",
-                mod_head->metadata.ident       ? (char *)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.ident)       : "N/A",
-                mod_head->metadata.name        ? (char *)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.name)        : "N/A",
-                mod_head->metadata.description ? (char *)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.description) : "N/A",
-                mod_head->metadata.license     ? (char *)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.license)     : "N/A");
-                
-        if(mod_head->metadata.authors) {
-            char **authors = (char **)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.authors);
-            size_t i = 0;
-            while(authors[i]) {
-                kprintf("\n    %s", elf_find_data(mod_elf, (uintptr_t)authors[i]));
-                i++;
-            }
-        } else {
-            kprintf("N/A");
-        }
-        kprintf("\n  Requirements: ");
-        if(mod_head->metadata.requirements) {
-            char **requirements = (char **)elf_find_data(mod_elf, (uintptr_t)mod_head->metadata.requirements);
-            size_t i = 0;
-            while(requirements[i]) {
-                kprintf("\n    %s", elf_find_data(mod_elf, (uintptr_t)requirements[i]));
-                i++;
-            }
-        } else {
-            kprintf("N/A");
-        }
-        kprintf("\n");
     } else if (!strcmp(argv[1], "load")) {
         if(argc < 3) {
             kprintf("No module specified!\n");

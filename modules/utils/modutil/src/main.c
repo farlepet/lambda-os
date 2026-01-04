@@ -171,7 +171,8 @@ static int _common_cgen(ljson_t *json) {
     reqs = _item->array;
     
 
-    dprintf(fd, "#include <lambda/mod/module.h>\n\n"
+    dprintf(fd, "#include <stddef.h>\n\n"
+                "#include \"lambda/mod/module.h\"\n\n"
                 "extern int mod_func(uint32_t, void *);\n\n"
                 "MODULE_HEADER = {\n"
                 "    .head_magic   = LAMBDA_MODULE_HEAD_MAGIC,\n"

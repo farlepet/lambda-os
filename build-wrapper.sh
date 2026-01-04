@@ -40,5 +40,6 @@ $COMMAND run $RUN_ARGS \
              -u $(id -u):$(id -g) \
              -e CROSS_COMPILE="/opt/lambda-cross/bin/$TARGET-" \
              -e HOST_CC="gcc" \
+             -e HOST_AR="ar" \
              git.pfarley.dev/lambda-os/builder:$TAG-$TARGET \
              "$@"

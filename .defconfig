@@ -52,6 +52,41 @@ CONFIG_PROC_USER_STACK_SIZE_MAX=65536
 # end of Lambda Kernel Configuration
 
 #
+# Modules Configuration
+#
+
+#
+# Hardware Support
+#
+
+#
+# I/O Devices
+#
+
+#
+# Serial Devices
+#
+# CONFIG_MOD_DRV_IO_SERIAL_8250 is not set
+# end of Serial Devices
+# end of I/O Devices
+# end of Hardware Support
+
+#
+# Filesystem Support
+#
+CONFIG_MOD_FS_DEVFS=y
+CONFIG_MOD_FS_DEVMEM=y
+CONFIG_MOD_FS_DEVNULL=y
+# end of Filesystem Support
+
+#
+# TTY Support
+#
+# CONFIG_MOD_TTY_TTY is not set
+# end of TTY Support
+# end of Modules Configuration
+
+#
 # General build options
 #
 CONFIG_BUILD_USE_WERROR=y

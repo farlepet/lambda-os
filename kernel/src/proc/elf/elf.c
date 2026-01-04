@@ -8,28 +8,54 @@
 #include <proc/elf.h>
 #include <io/output.h>
 
-int elf_find_section(const Elf32_Ehdr *elf, Elf32_Shdr **section, const char *section_name) {
-    Elf32_Shdr       *sections     = (Elf32_Shdr *)((uintptr_t)elf + elf->e_shoff);
+int elf_find_section_idx(const Elf32_Ehdr *elf, const char *section_name, uint32_t *idx) {
+    const Elf32_Shdr *sections     = elf_get_sections(elf);
     const Elf32_Shdr *strTabSec    = &sections[elf->e_shstrndx];
     const char       *strTabSecStr = (const char *)((uintptr_t)elf + strTabSec->sh_offset);
 
-    for(size_t i = 0; i < elf->e_shnum; i++) {
+    for(uint32_t i = 0; i < elf->e_shnum; i++) {
         if(!strcmp(&strTabSecStr[sections[i].sh_name], section_name)) {
-            if(section) {
-                *section = &sections[i];
+            if(idx) {
+                *idx = i;
             }
             return 0;
         }
     }
-    
+
+    kdebug(DEBUGSRC_MODULE, ERR_DEBUG, "elf_find_section_idx: Could not find section %s", section_name);
+
     /* Section not found */
     return -ENOEXEC;
 }
 
-uintptr_t elf_find_data(const Elf32_Ehdr *elf, uintptr_t addr) {
-    Elf32_Shdr       *sections     = (Elf32_Shdr *)((uintptr_t)elf + elf->e_shoff);
+int elf_find_section(const Elf32_Ehdr *elf, const char *section_name, const Elf32_Shdr **section) {
+    uint32_t idx;
+    if (elf_find_section_idx(elf, section_name, &idx)) {
+        return -ENOEXEC;
+    }
 
-    for(size_t i = 0; i < elf->e_shnum; i++) {
+    if (section) {
+        *section = &elf_get_sections(elf)[idx];
+    }
+
+    return 0;
+}
+
+int elf_get_section(const Elf32_Ehdr *elf, uint32_t index, const Elf32_Shdr **section) {
+    if (index > elf->e_shnum) {
+        return -EINVAL;
+    }
+
+    const Elf32_Shdr *sections = elf_get_sections(elf);
+    *section = &sections[index];
+
+    return 0;
+}
+
+uintptr_t elf_find_data(const Elf32_Ehdr *elf, uintptr_t addr) {
+    const Elf32_Shdr *sections = elf_get_sections(elf);
+
+    for(uint32_t i = 0; i < elf->e_shnum; i++) {
         if((addr >= sections[i].sh_addr) &&
            (addr <  (sections[i].sh_addr + sections[i].sh_size))) {
             return (uintptr_t)elf + sections[i].sh_offset +
@@ -41,7 +67,7 @@ uintptr_t elf_find_data(const Elf32_Ehdr *elf, uintptr_t addr) {
 }
 
 int elf_check_header(void *data) {
-    Elf32_Ehdr *head = (Elf32_Ehdr *)data;
+    const Elf32_Ehdr *head = data;
 
     if( (head->e_ident[0] != ELF_IDENT0) ||
         (head->e_ident[1] != ELF_IDENT1) ||
@@ -73,27 +99,40 @@ int elf_check_header(void *data) {
     return 0;
 }
 
-/* Criteria for exported symbols. */
-#define _SYM_CRITERIA(sym) ((sym.st_shndx != 0) &&                         \
-                            ((ELF32_ST_BIND(sym.st_info) == STB_GLOBAL) || \
-                             (ELF32_ST_BIND(sym.st_info) == STB_WEAK))  && \
-                            ((ELF32_ST_TYPE(sym.st_info) == STT_OBJECT) || \
-                             (ELF32_ST_TYPE(sym.st_info) == STT_FUNC)))
+int elf_shndx_from_symidx(const Elf32_Ehdr *elf, uint32_t symidx, uint32_t *shndx) {
+    const Elf32_Shdr *symtab;
+    if (elf_find_section(elf, ".symtab", &symtab)) {
+        return -EUNSPEC;
+    }
+
+    if ((symidx * symtab->sh_entsize) > symtab->sh_size) {
+        return -EUNSPEC;
+    }
+    *shndx = ((Elf32_Sym *)((uintptr_t)elf + symtab->sh_offset))[symidx].st_shndx;
+
+    if (*shndx == SHN_UNDEF) {
+        return -ENOENT;
+    }
+
+    return 0;
+}
+
+#define _SYM_CRITERIA(sym) (sym.st_shndx != SHN_UNDEF)
 
 int elf_load_symbols(const Elf32_Ehdr *elf, symbol_t **symbols) {
-    Elf32_Shdr *elf_strtab = NULL;
-    Elf32_Shdr *elf_symtab = NULL;
-    if(elf_find_section(elf, &elf_strtab, ".strtab") ||
-       elf_find_section(elf, &elf_symtab, ".symtab")) {
+    const Elf32_Shdr *elf_strtab = NULL;
+    const Elf32_Shdr *elf_symtab = NULL;
+    if(elf_find_section(elf, ".strtab", &elf_strtab) ||
+       elf_find_section(elf, ".symtab", &elf_symtab)) {
         return -1;
     }
 
-    Elf32_Sym *syms      = (Elf32_Sym *)((uintptr_t)elf + elf_symtab->sh_offset);
-    size_t     n_syms    = elf_symtab->sh_size / elf_symtab->sh_entsize;
+    const Elf32_Sym *syms   = (Elf32_Sym *)((uintptr_t)elf + elf_symtab->sh_offset);
+    uint32_t         n_syms = elf_symtab->sh_size / elf_symtab->sh_entsize;
     
     /* We only want to keep track of symbols within this ELF */
-    size_t     used_syms = 0;
-    for(size_t i = 0; i < n_syms; i++) {
+    uint32_t used_syms = 0;
+    for(uint32_t i = 0; i < n_syms; i++) {
         if(_SYM_CRITERIA(syms[i])) {
             used_syms++;
         }
@@ -107,9 +146,10 @@ int elf_load_symbols(const Elf32_Ehdr *elf, symbol_t **symbols) {
     char *sym_strtab = (char *)((uintptr_t)*symbols + (used_syms + 1) * sizeof(symbol_t));
     memcpy(sym_strtab, (void *)((uintptr_t)elf + elf_strtab->sh_offset), elf_strtab->sh_size);
 
-    size_t idx = 0;
-    for(size_t i = 0; i < n_syms; i++) {
+    uint32_t idx = 0;
+    for(uint32_t i = 0; i < n_syms; i++) {
         if(_SYM_CRITERIA(syms[i])) {
+            (*symbols)[idx].section = syms[i].st_shndx;
             (*symbols)[idx].name = &sym_strtab[syms[i].st_name];
             (*symbols)[idx].addr = syms[i].st_value;
             (*symbols)[idx].size = syms[i].st_size;

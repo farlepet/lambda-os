@@ -7,11 +7,11 @@
 int mod_func(uint32_t func, void *data __unused) {
     switch(func) {
         case LAMBDA_MODFUNC_START:
-            kdebug(DEBUGSRC_MODULE, ERR_INFO, "Initializing DevFS\n");
+            kdebug(DEBUGSRC_MODULE, ERR_INFO, "Initializing DevFS");
             devfs_init();
             break;
         case LAMBDA_MODFUNC_STOP:
-            kdebug(DEBUGSRC_MODULE, ERR_INFO, "Stopping DevFS\n");
+            kdebug(DEBUGSRC_MODULE, ERR_INFO, "Stopping DevFS");
             break;
         default:
             return -1;
