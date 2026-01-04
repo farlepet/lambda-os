@@ -1,5 +1,7 @@
 UTILSOBJS :=
 
+BIN_MODULE := -utils
+
 LINITDIR := $(UTILSDIR)/linit
 LSHELLDIR := $(UTILSDIR)/lshell
 LUTILSDIR := $(UTILSDIR)/lutils
@@ -29,10 +31,10 @@ UTILS_LDFLAGS := -T $(LIBDIR)/linker.ld
 $(UTILSBUILDDIR)%.o: $(UTILSDIR)/%.c
 	@echo -e "\033[32m    \033[1mCC\033[21m    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
-	$(Q) $(CC) $(UTILS_CFLAGS) -MMD -MP -c -o $@ $<
+	$(Q) $(CC) $(UTILS_CFLAGS) $(TARGET_CFLAGS) -MMD -MP -c -o $@ $<
 
-utils: $(utils-y)
+user-utils: $(utils-y)
 
-utils-clean: utils-linit-clean utils-lshell-clean utils-lutils-clean
+user-utils-clean: user-utils-linit-clean user-utils-lshell-clean user-utils-lutils-clean
 
 -include $(UTILSDEPS)

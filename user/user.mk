@@ -11,6 +11,6 @@ include $(UTILSDIR)/utils.mk
 
 .PHONY: user-clean
 
-user-clean: lib-clean utils-clean
-	#$(Q) rm -rf $(INITRDDIR)/bin
+user-clean: user-lib-clean user-utils-clean
+	@#$(Q) rm -rf $(INITRDDIR)/bin
 

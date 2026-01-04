@@ -30,9 +30,9 @@ $(LIBBUILDDIR)/%.o: $(LIBDIR)/%.c
 
 .PHONY: lib lib-clean
 
-lib: $(LIB_ARCHIVE)
+user-lib: $(LIB_ARCHIVE)
 
-lib-clean:
+user-lib-clean:
 	$(Q) rm -f $(LIBOBJS) $(LIB_ARCHIVE)
 
 -include $(LIBDEPS)
