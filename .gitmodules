@@ -1,6 +1,3 @@
-[submodule "lambda-kern"]
-	path = lambda-kern
-	url = ../lambda-kern.git
 [submodule "lambda-lib"]
 	path = lambda-lib
 	url = ../lambda-lib.git
