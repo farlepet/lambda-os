@@ -24,18 +24,18 @@ endif
 include $(MDIR)src/module.mk
 
 
-$(BUILDDIR)/lambda.ukern: $(BUILDDIR)/lambda.kern
+$(KBUILDDIR)/lambda.ukern: $(KBUILDDIR)/lambda.kern
 	@echo -e "\033[33m  \033[1mGenerating U-Boot compatible kernel image\033[0m"
 	$(Q) mkimage -A arm -C none -T kernel -a 0x60000000 -r 0x60000000 -d $< $@
 
-$(BUILDDIR)/sd.img: $(BUILDDIR)/lambda.ukern
+$(KBUILDDIR)/sd.img: $(KBUILDDIR)/lambda.ukern
 	@echo -e "\033[33m  \033[1mGenerating SD card image\033[0m"
 	# TODO: Find a way to do this without resorting to SUDO
 	kernel/arch/armv7/sdimg.sh
 
 
-emu: $(BUILDDIR)/lambda.kern
+emu: $(KBUILDDIR)/lambda.kern
 	@qemu-system-arm -cpu cortex-a9 -machine vexpress-a9 -kernel $< -serial stdio -no-reboot
 
-emu-debug: $(BUILDDIR)/lambda.kern
+emu-debug: $(KBUILDDIR)/lambda.kern
 	@qemu-system-arm -cpu cortex-a9 -machine vexpress-a9 -kernel $< -serial stdio -no-reboot -s -S

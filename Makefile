@@ -1,66 +1,46 @@
 MAINDIR    = $(CURDIR)
-KERNELDIR  = $(MAINDIR)/lambda-kern
+KERNELDIR  = $(MAINDIR)/kernel
 LBOOTDIR   = $(MAINDIR)/lboot
 BUILDDIR   = $(MAINDIR)/build
 INITRDDIR  = $(BUILDDIR)/initrd
 
+# TODO: Move to root
+include $(KERNELDIR)/.config
+
 KERNSRC     = $(shell find $(KERNELDIR)/kernel -type f \( -iname *.h -o -iname *.c \))
-KERNEL      = $(KERNELDIR)/build/x86/i486/pc/lambda.kern
-STRIPKERNEL = $(BUILDDIR)/lambda.kern
 CPIOFILES   = $(shell find $(INITRDDIR))
 
 INITRD      = $(BUILDDIR)/initrd.cpio
 INITRD_LZOP = $(BUILDDIR)/initrd.cpio.lzo
-FLOPPY      = $(BUILDDIR)/lambda-os.img
-ISO         = $(BUILDDIR)/lambda-os.iso
 
 LBOOT_BASE = $(LBOOTDIR)/boot.img
 
-STRIP      = $(CROSS_COMPILE)strip
 
-export CC
-export AS
-export LD
-export AR
-export STRIP
-export CROSS_COMPILE
+
 export CFLAGS
 export LDFLAGS
 export VERBOSE
 
+VERBOSE = 0
 ifeq ($(VERBOSE), 1)
 Q =
 else
 Q = @
 endif
 
-# TODO: Split into architecture-dependant includable mk files
+include $(KERNELDIR)/kernel.mk
 
-cdrom: $(ISO)
+include mk/media.mk
+include mk/compiler.mk
 
-floppy: $(FLOPPY)
-
-$(ISO): $(STRIPKERNEL) $(INITRD) $(BUILDDIR)/CD/boot/grub/stage2_eltorito
-	$(Q) cp $(INITRD) $(STRIPKERNEL) $(BUILDDIR)/CD/
-	$(Q) grub-mkrescue -o $@ $(BUILDDIR)/CD
 
 $(LBOOT_BASE):
 	$(Q) cd $(LBOOTDIR) && $(MAKE)
 
-# TODO: Allow choosing decompressed initrd
-$(FLOPPY): $(STRIPKERNEL) $(INITRD) $(INITRD_LZOP) $(LBOOT_BASE)
-	$(Q) rm -f $@
-	$(Q) cp $(LBOOT_BASE) $@
-	$(Q) mcopy -D oO -i $@ build/lboot.cfg ::/LBOOT/LBOOT.CFG
-	$(Q) #mcopy -D oO -i $@ $(INITRD)       ::/INITRD
-	$(Q) mcopy -D oO -i $@ $(INITRD_LZOP)  ::/INITRD
-	$(Q) mcopy -D oO -i $@ $(STRIPKERNEL)  ::/KERNEL.ELF
 
-$(STRIPKERNEL): $(KERNEL)
-	$(Q) $(STRIP) $< -o $@
 
-$(KERNEL): $(INITRD_LZOP) $(KERNSRC)
-	$(Q) cd $(KERNELDIR) && $(MAKE) build/x86/i486/pc/lambda.kern
+#$(KERNEL): $(INITRD_LZOP) $(KERNSRC)
+#	$(Q) cd $(KERNELDIR) && $(MAKE) build/x86/i486/pc/lambda.kern
 
 $(INITRD): pop-initrd $(CPIOFILES)
 	@echo -e "\033[33m  \033[1mGenerating InitCPIO\033[0m"
@@ -73,32 +53,16 @@ $(INITRD_LZOP): $(INITRD)
 	$(Q) lzop -9 -f -o $@ $<
 	$(Q) cp $(INITRD_LZOP) $(KERNELDIR)/initrd.cpio.lzo
 
-emu: $(ISO)
-	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot
 
-emu-floppy: $(FLOPPY)
-	$(Q) qemu-system-i386 -fda $(FLOPPY) -serial stdio -machine pc -no-reboot
-
-emu-floppy-dbg: $(FLOPPY)
-	$(Q) qemu-system-i386 -fda $(FLOPPY) -serial stdio -machine pc -no-reboot -gdb tcp::1234 -S
-
-emu-floppy-slow: $(FLOPPY)
-	$(Q) qemu-system-i386 -drive file=$(FLOPPY),if=floppy,format=raw,bps=12500 \
-	                      -serial stdio -machine pc -no-reboot
-
-emu-debug: $(ISO)
-	$(Q) qemu-system-i386 -cdrom $(ISO) -serial stdio -machine pc -no-reboot -gdb tcp::1234 -S
-
-clean: clean-user
+clean: clean-user kernel-clean
 	$(Q) rm -f $(INITRD) $(ISO) $(FLOPPY) $(KERNEL)
 	$(Q) rm -rf $(INITRDDIR)/bin
-	$(Q) cd $(KERNELDIR) && $(MAKE) clean
 	$(Q) cd $(LBOOTDIR) && $(MAKE) clean
 
-LLIB_DIR=$(MAINDIR)/lambda-lib
-LINIT_DIR=$(MAINDIR)/lambda-lutils/linit
-LSHELL_DIR=$(MAINDIR)/lambda-lutils/lshell
-LUTILS_DIR=$(MAINDIR)/lambda-lutils/lutils
+LLIB_DIR=$(MAINDIR)/user/lib
+LINIT_DIR=$(MAINDIR)/user/utils/linit
+LSHELL_DIR=$(MAINDIR)/user/utils/lshell
+LUTILS_DIR=$(MAINDIR)/user/utils/lutils
 
 LLIB=$(LLIB_DIR)/liblambda.a
 

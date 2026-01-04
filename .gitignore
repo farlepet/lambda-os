@@ -10,3 +10,5 @@
 stage2_eltorito
 build/initrd
 build/initrd.*
+build/kernel
+initrd.*

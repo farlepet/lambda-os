@@ -13,7 +13,5 @@ cflags-y    += -DCONFIG_ARCH_HW_PC
 
 asflags-y   +=
 
-.DEFAULT_GOAL=$(BUILDDIR)/lambda.kern
-
 include $(MDIR)src/module.mk
 
