@@ -40,8 +40,12 @@ cflags-y += -I$(KERNELDIR)/kernel/inc -I$(KERNELDIR) -I$(KERNELDIR)/kernel/arch/
             -pipe -g -fdata-sections -ffunction-sections \
             -DKERNEL_GIT=\"$(GIT_VERSION)\"
 
+KERNEL_CFLAGS := $(cflags-y)
+KERNEL_ASFLAGS := $(asflags-y)
+KERNEL_LDSFLAGS := $(ldsflags-y)
+KERNEL_LDOFLAGS := $(ldoflags-y)
+KERNEL_LDKFLAGS := $(ldKflags-y)
 
-SrcTest := $(patsubst $(KBUILDDIR)/%.o,$(KERNELDIR)/%.c,$(OBJS))
 
 .PHONY: kernel clean documentation cppcheck
 
@@ -55,7 +59,7 @@ $(STRIPKERNEL): $(KERNEL)
 $(KBUILDDIR)/symbols.o: $(KBUILDDIR)/lambda.o
 	@echo -e "\033[33m  \033[1mCreating symbol table\033[0m"
 	$(Q) scripts/symbols > $(KBUILDDIR)/symbols.c
-	$(Q) $(CC) $(cflags-y) -c -o $(KBUILDDIR)/symbols.o $(KBUILDDIR)/symbols.c
+	$(Q) $(CC) $(KERNEL_CFLAGS) -c -o $(KBUILDDIR)/symbols.o $(KBUILDDIR)/symbols.c
 
 # TODO: Only include this if FEATURE_INITRD_EMBEDDED
 $(KBUILDDIR)/initrd.o: initrd.cpio
@@ -70,15 +74,15 @@ $(KBUILDDIR)/initrd.lzo.o: initrd.cpio.lzo
 
 $(KBUILDDIR)/lambda.o: $(OBJS)
 	@echo -e "\033[33m  \033[1mLinking sources\033[0m"
-	$(Q) $(LD) $(ldoflags-y) -r -o $@ $(OBJS)
+	$(Q) $(LD) $(KERNEL_LDOFLAGS) -r -o $@ $(OBJS)
 
 $(KBUILDDIR)/lambda.shared: $(KBUILDDIR)/lambda.o
 	@echo -e "\033[33m  \033[1mLinking kernel\033[0m"
-	$(Q) $(CC) $(ldsflags-y) -shared -o $@ $< -T $(HWDIR)/hw.ld
+	$(Q) $(CC) $(KERNEL_LDSFLAGS) -shared -o $@ $< -T $(HWDIR)/hw.ld
 
-$(KBUILDDIR)/lambda.kern: $(KBUILDDIR)/lambda.o
+$(KERNEL): $(KBUILDDIR)/lambda.o
 	@echo -e "\033[33m  \033[1mProducing kernel executable\033[0m"
-	$(Q) $(CC) $(ldkflags-y) -o $@ $< -T $(HWDIR)/hw.ld -nostdlib -lgcc
+	$(Q) $(CC) $(KERNEL_LDKFLAGS) -o $@ $< -T $(HWDIR)/hw.ld -nostdlib -lgcc
 
 
 
@@ -101,12 +105,12 @@ kernel-scan-build:
 $(KBUILDDIR)/%.o: $(KERNELDIR)/%.c $(KERNELDIR)/.config
 	@echo -e "\033[32m    \033[1mCC\033[21m    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
-	$(Q) $(CC) $(cflags-y) -MMD -MP -c -o $@ $<
+	$(Q) $(CC) $(KERNEL_CFLAGS) -MMD -MP -c -o $@ $<
 
 $(KBUILDDIR)/%.o: $(KERNELDIR)/%.s $(KERNELDIR)/.config
 	@echo -e "\033[32m    \033[1mAS\033[21m    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
-	$(Q) $(AS) $(asflags-y) -c -o $@ $<
+	$(Q) $(AS) $(KERNEL_ASFLAGS) -c -o $@ $<
 
 $(KERNELDIR)/.config: | $(KERNELDIR)/.defconfig
 	@echo -e "\033[32m\033[1mCopying default .config\033[0m"

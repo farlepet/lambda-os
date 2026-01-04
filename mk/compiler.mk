@@ -56,3 +56,11 @@ endif
 STRIP      = $(CROSS_COMPILE)strip
 
 cflags-$(CONFIG_BUILD_USE_WERROR) += -Werror
+
+BUILDSUBDIR = $(subst $(MAINDIR),$(BUILDDIR),$(MDIR))
+
+
+mapout = $(foreach obj,$(1),$(subst $(MAINDIR),$(BUILDDIR),$(MDIR)$(obj)))
+#mapout = $(foreach obj,$(1),$(obj))
+#mapout = $(1)
+
