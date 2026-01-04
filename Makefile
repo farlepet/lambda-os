@@ -34,10 +34,10 @@ include mk/media.mk
 include mk/compiler.mk
 
 
+.PHONY: menuconfig clean pop-initrd clean-user
+
 $(LBOOT_BASE):
 	$(Q) cd $(LBOOTDIR) && $(MAKE)
-
-
 
 #$(KERNEL): $(INITRD_LZOP) $(KERNSRC)
 #	$(Q) cd $(KERNELDIR) && $(MAKE) build/x86/i486/pc/lambda.kern
@@ -53,6 +53,8 @@ $(INITRD_LZOP): $(INITRD)
 	$(Q) lzop -9 -f -o $@ $<
 	$(Q) cp $(INITRD_LZOP) $(KERNELDIR)/initrd.cpio.lzo
 
+menuconfig:
+	$(Q) cd $(KERNELDIR); menuconfig
 
 clean: clean-user kernel-clean
 	$(Q) rm -f $(INITRD) $(ISO) $(FLOPPY) $(KERNEL)
