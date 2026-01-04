@@ -102,12 +102,12 @@ kernel-scan-build:
 	@scan-build --use-cc=$(CC) -analyze-headers $(MAKE)
 
 
-$(KBUILDDIR)/%.o: $(KERNELDIR)/%.c $(KERNELDIR)/.config
+$(KBUILDDIR)/%.o: $(KERNELDIR)/%.c $(MAINDIR)/.config
 	@echo -e "\033[32m    \033[1mCC\033[21m    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CC) $(KERNEL_CFLAGS) -MMD -MP -c -o $@ $<
 
-$(KBUILDDIR)/%.o: $(KERNELDIR)/%.s $(KERNELDIR)/.config
+$(KBUILDDIR)/%.o: $(KERNELDIR)/%.s $(MAINDIR)/.config
 	@echo -e "\033[32m    \033[1mAS\033[21m    \033[34m$<\033[0m"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(AS) $(KERNEL_ASFLAGS) -c -o $@ $<

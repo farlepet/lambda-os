@@ -12,12 +12,12 @@ export HOST_STRIP
 export HOST_OBJCOPY
 export CROSS_COMPILE
 
-HOST_CC      := $(CC)
-HOST_AS      := $(AS)
-HOST_LD      := $(LD)
-HOST_AR      := $(AR)
-HOST_STRIP   := $(STRIP)
-HOST_OBJCOPY := $(OBJCOPY)
+HOST_CC      ?= $(CC)
+HOST_AS      ?= $(AS)
+HOST_LD      ?= $(LD)
+HOST_AR      ?= $(AR)
+HOST_STRIP   ?= $(STRIP)
+HOST_OBJCOPY ?= $(OBJCOPY)
 
 ifeq ($(CONFIG_BUILD_USE_CLANG),y)
     CC := clang
