@@ -1,0 +1,5 @@
+source "modules/modules/drv/Kconfig"
+source "modules/modules/fs/Kconfig"
+#source "modules/modules/test/Kconfig"
+source "modules/modules/tty/Kconfig"
+

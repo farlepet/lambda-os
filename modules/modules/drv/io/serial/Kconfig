@@ -1,0 +1,8 @@
+menu "Serial Devices"
+
+config MOD_DRV_IO_SERIAL_8250
+    bool "8250-compatible UART support (experimental)"
+    default n
+
+endmenu
+

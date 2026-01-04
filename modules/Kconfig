@@ -1,0 +1,6 @@
+menu "Modules Configuration"
+
+source "modules/modules/Kconfig"
+
+endmenu
+

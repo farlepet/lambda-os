@@ -1,0 +1,6 @@
+menu "I/O Devices"
+
+source "modules/modules/drv/io/serial/Kconfig"
+
+endmenu
+

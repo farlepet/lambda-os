@@ -1,0 +1,18 @@
+menu "Filesystem Support"
+
+config MOD_FS_DEVFS
+    bool "Base /dev filesystem"
+    default y
+
+config MOD_FS_DEVMEM
+    bool "/dev/mem support"
+    default y
+    depends on MOD_FS_DEVFS
+
+config MOD_FS_DEVNULL
+    bool "/dev/null support"
+    default y
+    depends on MOD_FS_DEVFS
+
+endmenu
+

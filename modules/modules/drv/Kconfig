@@ -1,0 +1,6 @@
+menu "Hardware Support"
+
+source "modules/modules/drv/io/Kconfig"
+
+endmenu
+

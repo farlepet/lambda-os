@@ -1,7 +1,7 @@
 mainmenu "Lambda OS Configuration"
 
-
 source "kernel/Kconfig"
+source "modules/Kconfig"
 
 menu "General build options"
 

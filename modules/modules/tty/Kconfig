@@ -1,0 +1,8 @@
+menu "TTY Support"
+
+config MOD_TTY_TTY
+    bool "Base TTY support (experimental)"
+    default n
+
+endmenu
+
