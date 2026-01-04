@@ -58,3 +58,4 @@ tags
 .cache/
 compile_commands.json
 
+initrd.cpio*
