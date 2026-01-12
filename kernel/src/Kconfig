@@ -42,5 +42,6 @@ config STRICTNESS
        255: Enable all checks
 
 source "kernel/src/crypto/Kconfig"
+source "kernel/src/ipc/Kconfig"
 source "kernel/src/proc/Kconfig"
 

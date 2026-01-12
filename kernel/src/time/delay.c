@@ -22,7 +22,9 @@ void delay(uint32_t delay) {
 
     disable_interrupts();
     add_time_block(&_time_over, cond, (uint64_t)delay * 1000000ULL, curr_thread->tid);
-    cond_wait(cond);
+    /* TODO: If we use a lock here, we could get rid of the disable_interrupts
+     * above */
+    cond_wait(cond, NULL);
 
     kfree(cond);
 }

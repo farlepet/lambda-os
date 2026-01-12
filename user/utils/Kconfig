@@ -1,0 +1,5 @@
+menu "Userspace Utilities"
+
+source "user/utils/testing/Kconfig"
+
+endmenu

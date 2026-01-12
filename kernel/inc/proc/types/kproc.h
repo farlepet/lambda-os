@@ -22,15 +22,16 @@ typedef struct kproc_mem_map_ent kproc_mem_map_ent_t;
 #define PROC_DOMAIN_MODULE    1 /** Processes originating from external modules */
 #define PROC_DOMAIN_USERSPACE 2 /** Processes in userspace */
 
-#include <proc/types/elf.h>
-#include <proc/types/kthread.h>
+#include "proc/types/elf.h"
+#include "proc/types/kthread.h"
 
-#include <data/types/llist.h>
-#include <fs/kfile.h>
-#include <mm/mmu.h>
-#include <mm/symbols.h>
+#include "data/types/llist.h"
+#include "fs/kfile.h"
+#include "mm/mmu.h"
+#include "mm/symbols.h"
+#include "ipc/types/ipc.h"
 
-#include <arch/proc/tasking.h>
+#include "arch/proc/tasking.h"
 
 struct kproc_mem_map_ent { //!< Memory-map entry
     uintptr_t virt_address; //!< Virtual address of memory location

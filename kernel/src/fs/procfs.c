@@ -10,66 +10,78 @@
 #include <mm/alloc.h>
 #include <mm/mm.h>
 
-
-uint32_t proc_fs_read(int desc, uint32_t off, uint32_t sz, uint8_t *buff) {
-    if(desc > MAX_OPEN_FILES) return 0;
-
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return 0;
-    
-    if(thread->process->open_files[desc]) {
-        return fs_read(thread->process->open_files[desc], off, sz, buff);
+kfile_hand_t *proc_fs_hand_by_fd(int desc) {
+    if ((desc > MAX_OPEN_FILES) || (desc < 0)) {
+        return NULL;
     }
 
-    return 0;
+    kthread_t *thread = mtask_get_curr_thread();
+    kassert(thread != NULL, "mtask_get_curr_thread returned NULL!");
+
+    return thread->process->open_files[desc];
 }
 
-uint32_t proc_fs_read_blk(int desc, uint32_t off, uint32_t sz, uint8_t *buff) {
-    if(desc > MAX_OPEN_FILES) return 0;
-    
+kfile_t *proc_fs_file_by_fd(int desc) {
+    if ((desc > MAX_OPEN_FILES) || (desc < 0)) {
+        return NULL;
+    }
+
     kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return 0;
+    kassert(thread != NULL, "mtask_get_curr_thread returned NULL!");
 
-    kfile_hand_t *file = thread->process->open_files[desc];
+    kfile_hand_t *hand = thread->process->open_files[desc];
+    kassert(hand->file != NULL, "kfile_hand_t::file is NULL!");
 
-    if(file) {
-        if(file->file && (file->file->flags & FS_STREAM) &&
-          !(file->open_flags & OFLAGS_NONBLOCK)) {
-            uint32_t count = 0;
-            while(count < sz) {
-                uint32_t ret = fs_read(file, off, sz - count, buff + count);
-                if(ret > 0x80000000) {
-                    return count;
-                }
-                count += ret;
-                run_sched(); // Wait
+    return hand->file;
+}
+
+int proc_fs_read(int desc, uint32_t off, uint32_t sz, uint8_t *buff) {
+    kfile_hand_t *hand = proc_fs_hand_by_fd(desc);
+    if (!hand) {
+        return -EBADF;
+    }
+
+    return fs_read(hand, off, sz, buff);
+}
+
+int proc_fs_read_blk(int desc, uint32_t off, uint32_t sz, uint8_t *buff) {
+    kfile_hand_t *hand = proc_fs_hand_by_fd(desc);
+    if (!hand) {
+        return -EBADF;
+    }
+
+    if (hand->file && (hand->file->flags & FS_STREAM) &&
+        !(hand->open_flags & OFLAGS_NONBLOCK)) {
+        uint32_t count = 0;
+        while (count < sz) {
+            uint32_t ret = fs_read(hand, off, sz - count, buff + count);
+            if(ret > 0x80000000) {
+                return count;
             }
-            return count;
-        } else {
-            off = thread->process->file_position[desc];
-            uint32_t n = fs_read(file, off, sz, buff);
-            thread->process->file_position[desc] += n;
-            return n;
+            count += ret;
+            run_sched(); // Wait
         }
-    }
+        return count;
+    } else {
+        kthread_t *thread = mtask_get_curr_thread();
 
-    return 0;
+        off = thread->process->file_position[desc];
+        uint32_t n = fs_read(hand, off, sz, buff);
+        thread->process->file_position[desc] += n;
+        return n;
+    }
 }
 
-uint32_t proc_fs_write(int desc, uint32_t off, uint32_t sz, uint8_t *buff) {
-    if(desc > MAX_OPEN_FILES) return 0;
-    
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return -EUNSPEC;
-
-    if(thread->process->open_files[desc]) {
-        return fs_write(thread->process->open_files[desc], off, sz, buff);
+int proc_fs_write(int desc, uint32_t off, uint32_t sz, uint8_t *buff) {
+    kfile_hand_t *hand = proc_fs_hand_by_fd(desc);
+    if (!hand) {
+        return -EBADF;
     }
 
-    return 0;
+    return fs_write(hand, off, sz, buff);
 }
 
-static int _open_check_flags(struct kfile *file, uint32_t flags) {
+static int _open_check_flags(kfile_t *file, uint32_t flags) {
     if(flags & OFLAGS_DIRECTORY) {
         if(!(file->flags & FS_DIR)) {
             return -ENOTDIR;
@@ -79,18 +91,9 @@ static int _open_check_flags(struct kfile *file, uint32_t flags) {
     return 0;
 }
 
-int proc_fs_open(const char *name, uint32_t flags) {
+int proc_fs_open_file(kfile_t *file, uint32_t flags) {
     kthread_t *thread = mtask_get_curr_thread();
     if(!thread) return -EUNSPEC;
-
-    if(thread->process->cwd == NULL) {
-        return -EUNSPEC;
-    }
-
-    struct kfile *file = fs_find_file(thread->process->cwd, name);
-    if(!file) {
-        return -ENOENT;
-    }
 
     // TODO: Check if file is open!!!
     // TODO: Handle errors!
@@ -103,7 +106,7 @@ int proc_fs_open(const char *name, uint32_t flags) {
     hand->open_flags = flags;
 
     if(fs_open(file, hand)) {
-        kdebug(DEBUGSRC_FS, ERR_DEBUG, "proc_fs_open: fs_open of %s failed!", name);
+        kdebug(DEBUGSRC_FS, ERR_DEBUG, "proc_fs_open: fs_open of %s failed!", file->name);
         kfree(hand);
         return -EUNSPEC;
     }
@@ -122,95 +125,93 @@ int proc_fs_open(const char *name, uint32_t flags) {
     return -ENFILE;
 }
 
-int proc_fs_close(int desc) {
-    if(desc > MAX_OPEN_FILES) return -EBADF;
-    
+int proc_fs_open(const char *name, uint32_t flags) {
     kthread_t *thread = mtask_get_curr_thread();
     if(!thread) return -EUNSPEC;
 
-    if(thread->process->open_files[desc]) {
-        fs_close(thread->process->open_files[desc]);
-        kfree(thread->process->open_files[desc]);
-        thread->process->open_files[desc] = NULL;
-        return 0; // TODO: Error checking!
+    if(thread->process->cwd == NULL) {
+        return -EUNSPEC;
     }
 
-    return -EBADF;
+    kfile_t *file = fs_find_file(thread->process->cwd, name);
+    if(!file) {
+        return -ENOENT;
+    }
+
+    return proc_fs_open_file(file, flags);
+}
+
+int proc_fs_close(int desc) {
+    kfile_hand_t *hand = proc_fs_hand_by_fd(desc);
+    if (!hand) {
+        return -EBADF;
+    }
+
+    fs_close(hand);
+    kfree(hand);
+
+    kthread_t *thread = mtask_get_curr_thread();
+    thread->process->open_files[desc] = NULL;
+
+    return 0; // TODO: Error checking!
 }
 
 int proc_fs_mkdir(int desc, char *name, uint32_t perms) {
-    if(desc > MAX_OPEN_FILES) return -EBADF;
-    
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return -EUNSPEC;
-    
-    if(thread->process->open_files[desc]) {
-        return fs_mkdir(thread->process->open_files[desc]->file, name, perms);
+    kfile_t *file = proc_fs_file_by_fd(desc);
+    if (!file) {
+        return -EBADF;
     }
 
-    return -EBADF;
+    return fs_mkdir(file, name, perms);
 }
 
 int proc_fs_create(int desc, char *name, uint32_t perms) {
-    if(desc > MAX_OPEN_FILES) return -EBADF;
-    
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return -EUNSPEC;
-    
-    if(thread->process->open_files[desc]) {
-        return fs_create(thread->process->open_files[desc]->file, name, perms);
+    kfile_t *file = proc_fs_file_by_fd(desc);
+    if (!file) {
+        return -EBADF;
     }
 
-    return -EBADF;
+    return fs_create(file, name, perms);
 }
 
 int proc_fs_ioctl(int desc, int req, void *args) {
-    if(desc > MAX_OPEN_FILES) return -EBADF;
-    
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return -EUNSPEC;
-    
-    if(thread->process->open_files[desc]) {
-        return fs_ioctl(thread->process->open_files[desc], req, args);
+    kfile_hand_t *hand = proc_fs_hand_by_fd(desc);
+    if (!hand) {
+        return -EBADF;
     }
 
-    return -EBADF;
+    return fs_ioctl(hand, req, args);
 }
 
 int proc_fs_getdirinfo(int desc, struct dirinfo *dinfo) {
-    if(desc > MAX_OPEN_FILES) return -EBADF;
     if(dinfo == NULL)         return -EINVAL;
-    
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return -EUNSPEC;
 
-    kfile_t *file = thread->process->open_files[desc]->file;
-
-    if(file) {
-        dinfo->ino        = file->inode;
-        if(file->parent) {
-            dinfo->parent_ino = file->parent->inode;
-        } else {
-            dinfo->parent_ino = 0;
-        }
-        dinfo->n_children = llist_count(&file->children);
-
-        memcpy(dinfo->name, file->name, FILE_NAME_MAX);
+    kfile_t *file = proc_fs_file_by_fd(desc);
+    if (!file) {
+        return -EBADF;
     }
+
+    dinfo->ino = file->inode;
+    if(file->parent) {
+        dinfo->parent_ino = file->parent->inode;
+    } else {
+        dinfo->parent_ino = 0;
+    }
+    dinfo->n_children = llist_count(&file->children);
+
+    memcpy(dinfo->name, file->name, FILE_NAME_MAX);
 
     return 0;
 }
 
 int proc_fs_readdir(int desc, uint32_t idx, struct user_dirent *buff, uint32_t buff_size) {
-    if(desc > MAX_OPEN_FILES) return -EBADF;
     if(buff == NULL)          return -EINVAL;
     if(buff_size == 0)        return -EINVAL;
-    
-    kthread_t *thread = mtask_get_curr_thread();
-    if(!thread) return -EUNSPEC;
 
-    kfile_t *file = thread->process->open_files[desc]->file;
-    if(file == NULL) return -EBADF;
+    kfile_t *file = proc_fs_file_by_fd(desc);
+    if (!file) {
+        return -EBADF;
+    }
 
     /* @todo Bounds checking */
 

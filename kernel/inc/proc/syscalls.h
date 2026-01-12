@@ -31,6 +31,12 @@ enum syscalls {
 
     SYSCALL_TASK_SWITCH = 24,
 
+#ifdef CONFIG_IPC
+    SYSCALL_IPC_CREATE = 30,
+    SYSCALL_IPC_SEND   = 31,
+    SYSCALL_IPC_RECV   = 32,
+#endif
+
     SYSCALL_MAX
 };
 

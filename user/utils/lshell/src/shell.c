@@ -214,7 +214,7 @@ static int _args_replace(char **args) {
     return 0;
 }
 
-static int _execute_command(char **args) {
+static int _execute_command(char **args, int bg) {
     char *cmd = args[0];
 
     if(cmd == NULL) {
@@ -238,11 +238,13 @@ static int _execute_command(char **args) {
         printf("`execve` returned, something went wrong!\n");
         exit(1);
     } else { // Parent process
-        pid_t child = wait(NULL);
-        if(child == -1) {
-            printf("Something went wrong while waiting.\n");
-        } else {
-            /* @todo Get child's return status */
+        if (!bg) {
+            pid_t child = wait(NULL);
+            if(child == -1) {
+                printf("Something went wrong while waiting.\n");
+            } else {
+                /* @todo Get child's return status */
+            }
         }
     }
 
@@ -251,13 +253,19 @@ static int _execute_command(char **args) {
 
 
 static void _handle_command(const char *str) {
+    /* TODO: Support more complex usage */
+    int bg = 0;
+    if (str[strlen(str) - 1] == '&') {
+        bg = 1;
+    }
+
     char **args = _args_split(str);
 
     if(args) {
         if(_args_replace(args)) {
             goto CMD_DONE;
         }
-        _execute_command(args);
+        _execute_command(args, bg);
 
 CMD_DONE:
         for(unsigned i = 0; args[i] != NULL; i++) {

@@ -3,6 +3,7 @@
 #include <lambda/config_defs.h>
 #include <lambda/export.h>
 #include <err/panic.h>
+#include <mm/alloc.h>
 #include <mm/mm.h>
 
 /**
@@ -136,6 +137,19 @@ char *strncpy(char *dest, const char *src, size_t n) {
     return dest;
 }
 EXPORT_FUNC(strncpy);
+
+char *strdup(const char *str) {
+    size_t len = strlen(str);
+    char *copy = kmalloc(len + 1);
+    if (!copy) {
+        return NULL;
+    }
+
+    memcpy(copy, str, len + 1);
+
+    return copy;
+}
+EXPORT_FUNC(strdup);
 
 void *memcpy(void *dest, const void *src, size_t n) {
 #if CHECK_STRICTNESS(LAMBDA_STRICTNESS_HIGHIMPACT)

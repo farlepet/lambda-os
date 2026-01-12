@@ -36,6 +36,15 @@ char *strcpy(char *dest, const char *src);
 
 char *strncpy(char *dest, const char *src, size_t n);
 
+/**
+ * @brief Duplicate string, returning newly allocated memory
+ *
+ * @param str String to duplicate
+ *
+ * @return Address of duplicated string, or NULL if space could not be allocated
+ */
+char *strdup(const char *str);
+
 void *memcpy(void *dest, const void *src, size_t n);
 
 void *memset(void *s, int c, size_t n);

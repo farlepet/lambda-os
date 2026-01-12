@@ -55,7 +55,7 @@ void tlock_acquire(tlock_t *tlock) {
         run_sched();
     }
 
-    cond_wait(cond);
+    cond_wait(cond, NULL);
 
     kfree(cond);
 }

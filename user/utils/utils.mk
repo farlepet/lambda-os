@@ -5,6 +5,7 @@ BIN_MODULE := -utils
 LINITDIR := $(UTILSDIR)/linit
 LSHELLDIR := $(UTILSDIR)/lshell
 LUTILSDIR := $(UTILSDIR)/lutils
+TESTINGDIR := $(UTILSDIR)/testing
 
 UTILSBUILDDIR := $(BUILDSUBDIR)
 
@@ -13,6 +14,7 @@ utils-y :=
 include $(LINITDIR)/module.mk
 include $(LSHELLDIR)/module.mk
 include $(LUTILSDIR)/module.mk
+include $(TESTINGDIR)/module.mk
 
 user-bin-y := $(utils-y)
 

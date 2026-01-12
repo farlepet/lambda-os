@@ -1,0 +1,7 @@
+menuconfig IPC
+    bool "IPC (Inter-Process Communication) support (experimental)"
+    default y
+
+if IPC
+endif # IPC
+

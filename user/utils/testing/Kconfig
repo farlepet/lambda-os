@@ -1,0 +1,11 @@
+menu "Testing Utilities"
+
+config USER_UTILS_TEST_IPC_SRV
+    bool "ipc_srv (IPC test server)"
+    default y
+
+config USER_UTILS_TEST_IPC_CLIENT
+    bool "ipc_client (IPC test client)"
+    default y
+
+endmenu

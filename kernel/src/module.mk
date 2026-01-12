@@ -16,6 +16,7 @@ dirs-y := data \
           time
 
 dirs-$(CONFIG_CRYPTO) += crypto
+dirs-$(CONFIG_IPC)    += ipc
 
 include $(patsubst %,$(MDIR)%/module.mk,$(dirs-y))
 

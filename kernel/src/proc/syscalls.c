@@ -1,19 +1,20 @@
 #include <errno.h>
 #include <string.h>
 
-#include <err/error.h>
-#include <err/panic.h>
-#include <intr/intr.h>
-#include <proc/syscalls.h>
+#include "err/error.h"
+#include "err/panic.h"
+#include "intr/intr.h"
+#include "proc/syscalls.h"
 
-#include <arch/intr/syscall.h>
+#include "arch/intr/syscall.h"
 
 // Includes that include syscalls
-#include <fs/procfs.h>
-#include <mm/mmap.h>
-#include <proc/exec.h>
-#include <proc/ktasks.h>
-#include <proc/mtask.h>
+#include "fs/procfs.h"
+#include "ipc/ipc.h"
+#include "mm/mmap.h"
+#include "proc/exec.h"
+#include "proc/ktasks.h"
+#include "proc/mtask.h"
 
 #if 1
 #  define syscall_debug(...) kdebug(DEBUGSRC_SYSCALL, __VA_ARGS__)
@@ -53,6 +54,12 @@ static const syscall_desc_t _syscalls[] = {
     [SYSCALL_WAIT]   = { (func0_t)wait,   1 },
 
     [SYSCALL_TASK_SWITCH] = { (func0_t)do_task_switch, 0 },
+
+#ifdef CONFIG_IPC
+    [SYSCALL_IPC_CREATE] = { (func0_t)sys_ipc_create, 1 },
+    [SYSCALL_IPC_SEND]   = { (func0_t)sys_ipc_send,   2 },
+    [SYSCALL_IPC_RECV]   = { (func0_t)sys_ipc_recv,   2 },
+#endif
 };
 #pragma GCC diagnostic pop
 

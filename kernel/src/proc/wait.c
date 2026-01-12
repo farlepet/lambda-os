@@ -64,7 +64,7 @@ int wait(int *stat_loc) {
     }
 
     // Block and wait for scheduler
-    cond_wait(curr_proc->wait_cond);
+    cond_wait(curr_proc->wait_cond, NULL);
 
     // When process is re-entered here, a child has exited
     chidx = _find_dead_child(curr_proc);

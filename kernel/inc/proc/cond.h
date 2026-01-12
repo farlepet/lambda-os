@@ -3,6 +3,7 @@
 
 #include <mm/alloc.h>
 #include <proc/types/cond.h>
+#include <proc/atomic/types/tlock.h>
 
 /**
  * @brief Initialize condition variable
@@ -11,6 +12,15 @@
  * @return int 0 on success, else non-zero
  */
 int cond_init(cond_t *cond);
+
+/**
+ * @brief Free resources used by the condition variable
+ *
+ * @note This currently is not implemented, but should be
+ *
+ * @param cond Condition variable to destroy
+ */
+void cond_destroy(cond_t *cond);
 
 /**
  * @brief Allocate and initialize a condition variable
@@ -31,9 +41,10 @@ static inline cond_t *cond_create(void) {
  * @brief Wait for condition variable to be signaled
  *
  * @param cond Condition variable
+ * @param lock Lock protecting data condition variable is waiting on
  * @return int 0 on success, else non-zero
  */
-int cond_wait(cond_t *cond);
+int cond_wait(cond_t *cond, tlock_t *lock);
 
 /**
  * @brief Wakeup threads waiting on condition varialbe

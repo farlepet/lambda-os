@@ -29,6 +29,9 @@ enum syscalls {
 
     SYSCALL_TASK_SWITCH = 24,
 
+    SYSCALL_IPC_CREATE = 30,
+    SYSCALL_IPC_SEND   = 31,
+    SYSCALL_IPC_RECV   = 32,
 };
 
 typedef uint32_t syscallarg_t;

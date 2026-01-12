@@ -4,6 +4,7 @@
 #include <lambda/config_defs.h>
 #include <lambda/export.h>
 #include <proc/atomic/lock.h>
+#include <proc/atomic/tlock.h>
 #include <proc/cond.h>
 #include <proc/mtask.h>
 #include <mm/alloc.h>
@@ -16,7 +17,12 @@ int cond_init(cond_t *cond) {
 }
 EXPORT_FUNC(cond_init);
 
-int cond_wait(cond_t *cond) {
+void cond_destroy(cond_t *cond) {
+    /* TODO */
+    (void)cond;
+}
+
+int cond_wait(cond_t *cond, tlock_t *tlock) {
     kthread_t *thread = mtask_get_curr_thread();
 #if CHECK_STRICTNESS(LAMBDA_STRICTNESS_LOWIMPACT)
     if(!thread) { return -EUNSPEC; }
@@ -30,12 +36,18 @@ int cond_wait(cond_t *cond) {
 
     lock(&cond->lock);
     llist_append(&cond->list, &item->list_item);
-    unlock(&cond->lock);
-
     /* @todo Remove thread from scheduler */
     thread->cond = cond;
+    if (tlock) {
+        tlock_release(tlock);
+    }
+    unlock(&cond->lock);
+
     run_sched();
 
+    if (tlock) {
+        tlock_acquire(tlock);
+    }
     return 0;
 }
 EXPORT_FUNC(cond_wait);
